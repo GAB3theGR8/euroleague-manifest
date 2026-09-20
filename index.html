@@ -33,6 +33,16 @@
     padding-inline:18px; padding-block:16px; max-width:1180px; margin-inline:auto; }
   h1,h2,h3,.display { font-weight:700; text-transform:uppercase; letter-spacing:.02em; margin:0; }
   .mono, input.id-input { font-family: ui-monospace, "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+
+  /* brand header */
+  .euroleague-brand { display:flex; align-items:center; justify-content:center; gap:10px; padding-block:10px 4px; }
+  .euroleague-brand img { height:30px; width:auto; display:block; }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) .euroleague-brand img { filter: brightness(0) invert(1); }
+  }
+  :root[data-theme="dark"] .euroleague-brand img { filter: brightness(0) invert(1); }
+  .euroleague-brand .sep { color: var(--border); font-size: 1.1rem; }
+  .euroleague-brand .tag { font-size: .72rem; color: var(--text-dim); text-transform: uppercase; letter-spacing: .08em; }
   a { color: var(--accent); }
   header.top { position: sticky; top:0; z-index:20; background:var(--bg); padding-block:10px 12px;
     border-bottom:1px solid var(--border); margin-bottom:16px; display:flex; flex-direction:column; gap:10px; }
@@ -160,6 +170,8 @@
 </head>
 <body>
 
+<div class="euroleague-brand" id="euroleague-brand"></div>
+
 <header class="top">
   <div class="brand-row">
     <h1><span class="accent-mark">Cyberface</span> Manifest &middot; EuroLeague 2026&ndash;27</h1>
@@ -197,6 +209,7 @@
 <input type="file" id="preview-file-input" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
 
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
 <script>
 (function () {
   "use strict";
@@ -213,6 +226,7 @@
   // ---------- state ----------
   var session = null;
   var myProfile = null;          // { id, display_name, role, is_owner }
+  var profileLoaded = false;     // true once we've asked Supabase for the profile at least once
   var profiles = [];             // everyone visible to us (approved users see all)
   var players = [];
   var teams = [];
@@ -342,7 +356,16 @@
       bindGateAuth();
       return;
     }
-    if (!myProfile) { root.innerHTML = ""; return; } // still loading
+    if (!myProfile) {
+      if (profileLoaded) {
+        // session is valid but there's no matching profile row (e.g. the
+        // account was deleted server-side) -- bounce back to sign-in instead
+        // of showing a permanent blank screen.
+        sb.auth.signOut();
+      }
+      root.innerHTML = ""; // still loading
+      return;
+    }
     if (isRegisteredAndApproved()) { root.innerHTML = ""; return; }
     // pending
     root.innerHTML =
@@ -639,7 +662,7 @@
 
     var completeBtns = "";
     var canComplete = !locked && p.author_id && (isAdmin() || p.author_id === (myProfile && myProfile.id));
-    var canUnlock = locked && isAdmin();
+    var canUnlock = locked && (isAdmin() || p.author_id === (myProfile && myProfile.id));
     if (canComplete) completeBtns = '<button class="small primary" data-mark-complete="' + p.id + '" style="width:100%;">Mark Completed</button>';
     else if (canUnlock) completeBtns = '<button class="small danger-outline" data-unlock="' + p.id + '" style="width:100%;">Unlock</button>';
 
@@ -654,7 +677,7 @@
       '<select class="position-select" data-position-select="' + p.id + '"' + (canEditFully ? "" : " disabled") + '>' + positionOptions(p.position) + '</select>' +
       '<div class="divider"></div>' +
       authorRow +
-      '<div class="field"><span class="field-label">Cyberface ID</span><input class="id-input mono" data-id-input="' + p.id + '" placeholder="e.g. 1044" value="' + escAttr(p.cyberface_id || "") + '" maxlength="64"' + ((canEdit || canStageId) ? "" : " disabled") + '>' +
+      '<div class="field"><span class="field-label">Cyberface ID</span><input class="id-input mono" data-id-input="' + p.id + '" placeholder="e.g. 07252" value="' + escAttr(p.cyberface_id || "") + '" maxlength="64"' + ((canEdit || canStageId) ? "" : " disabled") + '>' +
       '</div>' +
       '<div class="field"><span class="field-label">Status</span><select class="status-select status-' + p.status + '" data-status-select="' + p.id + '"' + (canEdit ? "" : " disabled") + '>' +
       ["unclaimed", "in_progress", "done", "revision"].map(function (s) {
@@ -799,13 +822,24 @@
   }
 
   // ---------- claim / cyberface id ----------
+  // Cyberface IDs this season are 5-digit numbers. "7252" and "07252" are the
+  // same ID, so normalize numeric input to 5 digits before it's ever compared
+  // or saved -- this mirrors the DB-level trigger (normalize_cyberface_id),
+  // just done client-side too so the mismatch is caught instantly instead of
+  // only after a round trip to the server.
+  function normalizeCyberfaceId(id) {
+    id = (id || "").trim();
+    if (/^[0-9]+$/.test(id)) return id.length < 5 ? ("00000" + id).slice(-5) : id;
+    return id;
+  }
+
   async function reserveCyberfaceId(player, newId) {
     if (!pathSafe(newId)) return { ok: false, message: "ID can only use letters, numbers, and _ - . : @ + ~" };
     return { ok: true };
   }
 
   async function claimCyberfaceId(player, newId) {
-    newId = (newId || "").trim();
+    newId = normalizeCyberfaceId(newId);
     if (!canEditPlayer(player)) { toast("Only the author who claimed this player (or an admin) can set their cyberface ID.", false); renderRoster(); return; }
     if (newId === (player.cyberface_id || "")) return;
     if (newId === "") { toast("A claimed player must have a Cyberface ID. Unclaim instead if you want to release it.", false); renderRoster(); return; }
@@ -824,7 +858,7 @@
   async function claimPlayer(player) {
     if (!myProfile) return;
     var idInput = document.querySelector('[data-id-input="' + player.id + '"]');
-    var idVal = (idInput ? idInput.value : (player.cyberface_id || "")).trim();
+    var idVal = normalizeCyberfaceId(idInput ? idInput.value : (player.cyberface_id || ""));
     if (!idVal) { toast("Enter a Cyberface ID before claiming this player.", false); if (idInput) idInput.focus(); return; }
     var check = await reserveCyberfaceId(player, idVal);
     if (!check.ok) { toast(check.message, false); return; }
@@ -1028,12 +1062,23 @@
     if (addBtn) addBtn.onclick = function () { window._iffTarget = p.id; document.getElementById("iff-file-input").click(); };
   }
 
+  var exporting = false;
+
   function adminModalHtml() {
     var pending = profiles.filter(function (u) { return u.role === "pending"; });
     var approved = profiles.filter(function (u) { return u.role === "author" || u.role === "admin"; });
+    var completedPlayers = players.filter(function (p) { return p.locked && p.files && p.files.length; });
+    var totalFiles = completedPlayers.reduce(function (n, p) { return n + p.files.length; }, 0);
     var html = '<div class="modal-overlay"><div class="modal-box">' +
       '<div class="modal-close-row"><button data-modal-close>✕</button></div>' +
       '<h2>Admin Panel</h2>' +
+      '<div class="admin-section-title">Export</div>' +
+      '<p style="font-size:.8rem;color:var(--text-dim);margin:2px 0 10px;">' +
+      completedPlayers.length + ' completed player' + (completedPlayers.length === 1 ? '' : 's') +
+      ' with ' + totalFiles + ' cyberface file' + (totalFiles === 1 ? '' : 's') + ' ready to bundle.</p>' +
+      '<button class="primary" id="export-btn" style="width:100%;margin-bottom:16px;"' +
+      (exporting || !completedPlayers.length ? ' disabled' : '') + '>' +
+      (exporting ? 'Building EuroLeague_Cyberfaces.zip…' : 'Export EuroLeague_Cyberfaces.zip') + '</button>' +
       '<div class="admin-section-title">Pending requests (' + pending.length + ')</div>';
     html += pending.length ? pending.map(function (u) {
       return '<div class="admin-user-row"><span class="uname">' + escHtml(u.display_name) + '</span>' +
@@ -1054,6 +1099,8 @@
   }
   function bindAdminModal() {
     var root = document.getElementById("modal-root");
+    var exportBtn = document.getElementById("export-btn");
+    if (exportBtn) exportBtn.onclick = runExport;
     async function setRole(id, role) {
       var res = await sb.from("profiles").update({ role: role }).eq("id", id);
       if (res.error) toast("Couldn't update: " + res.error.message, false);
@@ -1073,6 +1120,61 @@
     });
   }
 
+  // ---------- export ----------
+  async function runExport() {
+    if (exporting) return;
+    if (typeof JSZip === "undefined") { toast("Zip library didn't load — try reloading.", false); return; }
+    var completedPlayers = players.filter(function (p) { return p.locked && p.files && p.files.length; });
+    if (!completedPlayers.length) { toast("No completed players with files to export yet.", false); return; }
+
+    exporting = true;
+    renderModal();
+    try {
+      var zip = new JSZip();
+      var manifestRows = ["team,player,cyberface_id,filename,uploaded_by"];
+      var usedNames = {};
+      for (var i = 0; i < completedPlayers.length; i++) {
+        var p = completedPlayers[i];
+        var team = teams.filter(function (t) { return t.slug === p.team_slug; })[0];
+        for (var j = 0; j < p.files.length; j++) {
+          var f = p.files[j];
+          var dl = await sb.storage.from(BUCKET).download(f.storage_path);
+          if (dl.error) { toast("Couldn't fetch " + f.file_name + " — skipped.", false); continue; }
+          // Every file goes in one flat folder, same as the old tool. Different
+          // players can end up with same-named files (e.g. everyone's "cyberface.iff"),
+          // so prefix with the player's cyberface ID to keep names unique and
+          // traceable back to who it belongs to without opening manifest.csv.
+          var rawName = f.file_name || ((p.cyberface_id || p.id) + ".iff");
+          var safeName = (p.cyberface_id || p.id) + "_" + rawName;
+          if (usedNames[safeName]) {
+            usedNames[safeName]++;
+            var extIdx = safeName.lastIndexOf(".");
+            safeName = (extIdx > 0 ? safeName.slice(0, extIdx) : safeName) + "_" + usedNames[safeName] + (extIdx > 0 ? safeName.slice(extIdx) : "");
+          } else {
+            usedNames[safeName] = 1;
+          }
+          zip.file(safeName, dl.data);
+          manifestRows.push([team ? team.name : p.team_slug, p.name, p.cyberface_id || "", safeName, profileName(f.uploaded_by) || ""].map(function (v) {
+            return '"' + String(v).replace(/"/g, '""') + '"';
+          }).join(","));
+        }
+      }
+      zip.file("manifest.csv", manifestRows.join("\n"));
+      var blob = await zip.generateAsync({ type: "blob" });
+      var a = document.createElement("a");
+      var url = URL.createObjectURL(blob);
+      a.href = url; a.download = "EuroLeague_Cyberfaces.zip";
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+      toast("Export saved.", true);
+    } catch (e) {
+      toast("Export failed: " + (e && e.message ? e.message : "unknown error"), false);
+    } finally {
+      exporting = false;
+      renderModal();
+    }
+  }
+
   // ---------- data loading + realtime ----------
   async function loadProfiles() {
     var res = await sb.from("profiles").select("*");
@@ -1086,6 +1188,18 @@
       teams.forEach(function (t) { if (t.logo_path) teamLogoPaths[t.slug] = t.logo_path; });
       if (teamIndex >= teams.length) teamIndex = 0;
     }
+  }
+  async function loadBrand() {
+    var res = await sb.from("meta").select("*").eq("key", "brand").maybeSingle();
+    brand = (!res.error && res.data && res.data.value) ? res.data.value : null;
+  }
+  function renderBrand() {
+    var el = document.getElementById("euroleague-brand");
+    var logoPath = brand && brand.logo_path;
+    if (!logoPath) { el.innerHTML = '<span class="tag">EuroLeague &middot; Cyberface Program</span>'; return; }
+    el.innerHTML = '<img data-lazy-img="' + escAttr(logoPath) + '" alt="EuroLeague">' +
+      '<span class="sep">&middot;</span><span class="tag">Cyberface Program</span>';
+    hydrateImages([logoPath], function () { applyLazyImages(el); });
   }
   async function loadPlayers() {
     var res = await sb.from("players").select("*, player_files(*), player_previews(*)").order("name");
@@ -1116,13 +1230,15 @@
   }
 
   async function refreshMyProfile() {
-    if (!session) { myProfile = null; return; }
+    if (!session) { myProfile = null; profileLoaded = false; return; }
     var res = await sb.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
     myProfile = res.data || null;
+    profileLoaded = true;
   }
 
   // ---------- render orchestration ----------
   function renderAll() {
+    renderBrand();
     renderWhoAmI();
     renderGate();
     renderStats();
@@ -1141,6 +1257,7 @@
 
   // ---------- boot ----------
   async function boot() {
+    await loadBrand(); // public read, works even signed out
     var initial = await sb.auth.getSession();
     session = initial.data && initial.data.session;
     if (session) { await refreshMyProfile(); await Promise.all([loadProfiles(), loadTeams(), loadPlayers()]); subscribeRealtime(); }
