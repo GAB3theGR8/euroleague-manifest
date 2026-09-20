@@ -1,0 +1,1168 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cyberface Manifest</title>
+<style>
+  :root {
+    --bg: #f5f3ee; --surface: #ffffff; --surface-2: #edeae1; --border: #ded9cc;
+    --text: #1d1a14; --text-dim: #726b5a; --accent: #cf5327; --accent-ink: #fffaf4;
+    --success: #2f7d4f; --success-bg: #e3f1e7; --warning: #a8710c; --warning-bg: #f6ecd6;
+    --danger: #c1392b; --danger-bg: #fbe6e2; --mono-bg: #eee8d9;
+    --shadow: 0 1px 2px rgba(30,20,5,.06), 0 6px 20px rgba(30,20,5,.05);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#15120e; --surface:#1f1b15; --surface-2:#262119; --border:#3a3226;
+      --text:#f3ecdd; --text-dim:#ab9f87; --accent:#ff7c46; --accent-ink:#1c1108;
+      --success:#57b586; --success-bg:#1c3327; --warning:#e2ab3f; --warning-bg:#3a2e14;
+      --danger:#ef6455; --danger-bg:#3a1e18; --mono-bg:#2a251b;
+      --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:#15120e; --surface:#1f1b15; --surface-2:#262119; --border:#3a3226;
+    --text:#f3ecdd; --text-dim:#ab9f87; --accent:#ff7c46; --accent-ink:#1c1108;
+    --success:#57b586; --success-bg:#1c3327; --warning:#e2ab3f; --warning-bg:#3a2e14;
+    --danger:#ef6455; --danger-bg:#3a1e18; --mono-bg:#2a251b;
+    --shadow: 0 1px 2px rgba(0,0,0,.3), 0 8px 24px rgba(0,0,0,.35);
+  }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font-family:"Segoe UI",system-ui,sans-serif;
+    padding-inline:18px; padding-block:16px; max-width:1180px; margin-inline:auto; }
+  h1,h2,h3,.display { font-weight:700; text-transform:uppercase; letter-spacing:.02em; margin:0; }
+  .mono, input.id-input { font-family: ui-monospace, "JetBrains Mono", monospace; font-variant-numeric: tabular-nums; }
+  a { color: var(--accent); }
+  header.top { position: sticky; top:0; z-index:20; background:var(--bg); padding-block:10px 12px;
+    border-bottom:1px solid var(--border); margin-bottom:16px; display:flex; flex-direction:column; gap:10px; }
+  .brand-row { display:flex; justify-content:space-between; align-items:baseline; gap:10px; flex-wrap:wrap; }
+  .brand-row h1 { font-size:1.15rem; color:var(--text-dim); letter-spacing:.06em; }
+  .brand-row h1 .accent-mark { color:var(--accent); }
+  .whoami-row { display:flex; align-items:center; justify-content:center; gap:8px; flex-wrap:wrap; font-size:.8rem; color:var(--text-dim); }
+  .role-chip { display:inline-flex; align-items:center; gap:4px; background:var(--surface-2); border:1px solid var(--border);
+    border-radius:999px; padding:2px 10px; font-weight:600; font-size:.72rem; text-transform:uppercase; letter-spacing:.04em; }
+  .role-chip.admin { background:var(--danger-bg); color:var(--danger); border-color:transparent; }
+  .role-chip.author { background:var(--success-bg); color:var(--success); border-color:transparent; }
+  button.link-btn { all:unset; cursor:pointer; color:var(--accent); font-size:.78rem; text-decoration:underline; }
+  .pending-badge { display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px; padding:0 4px;
+    margin-left:4px; border-radius:999px; background:var(--danger); color:#fff; font-size:.65rem; font-weight:700; line-height:1; vertical-align:middle; }
+  .team-nav { display:flex; align-items:center; justify-content:center; gap:10px; }
+  .nav-btn { width:40px; height:40px; border-radius:50%; border:1px solid var(--border); background:var(--surface); color:var(--text);
+    font-size:1.2rem; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; box-shadow:var(--shadow); }
+  .nav-btn:hover { background:var(--surface-2); }
+  .team-nav-center { text-align:center; min-width:0; flex:1; max-width:480px; }
+  .team-display-name { font-size:clamp(1.6rem,6vw,2.4rem); color:var(--text); line-height:1.05; }
+  .team-display-meta { color:var(--text-dim); font-size:.8rem; margin-top:2px; }
+  .team-logo-wrap { width:60px; height:60px; border-radius:50%; margin:0 auto 6px; background:var(--surface-2); border:1px solid var(--border); overflow:hidden; }
+  .team-logo-wrap img { width:100%; height:100%; object-fit:contain; display:block; background:var(--surface); }
+  .logo-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:1rem; color:var(--text-dim); }
+  .stat-row { display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .stat { background:var(--surface); border:1px solid var(--border); border-radius:9px; padding:5px 11px; box-shadow:var(--shadow);
+    display:flex; align-items:baseline; gap:5px; }
+  .stat .n { font-weight:700; font-size:1.1rem; }
+  .stat .l { font-size:.68rem; color:var(--text-dim); text-transform:uppercase; letter-spacing:.05em; }
+  .controls { display:flex; gap:8px; flex-wrap:wrap; align-items:center; justify-content:center; }
+  input, select, button { font-family:inherit; font-size:.86rem; border-radius:8px; border:1px solid var(--border); background:var(--surface); color:var(--text); padding:7px 10px; }
+  input:disabled, select:disabled { opacity:1; color:var(--text); background:var(--surface-2); cursor:not-allowed; }
+  input:focus, select:focus, button:focus-visible { outline:2px solid var(--accent); outline-offset:1px; }
+  #search { flex:1 1 180px; min-width:140px; max-width:260px; }
+  button { cursor:pointer; }
+  button.primary { background:var(--accent); color:var(--accent-ink); border-color:var(--accent); font-weight:600; }
+  button.primary:hover { filter:brightness(1.06); }
+  button.ghost { background:transparent; }
+  button.ghost:hover { background:var(--surface-2); }
+  button.small { font-size:.72rem; padding:4px 9px; border-radius:7px; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  button.danger-outline { color:var(--danger); border-color:var(--danger); background:transparent; }
+  button.danger-outline:hover { background:var(--danger-bg); }
+  details.authors { background:var(--surface); border:1px solid var(--border); border-radius:10px; padding:7px 12px; max-width:520px; margin:0 auto; width:100%; }
+  details.authors summary { cursor:pointer; font-size:.82rem; font-weight:600; color:var(--text-dim); list-style:none; text-align:center; }
+  details.authors summary::-webkit-details-marker { display:none; }
+  .empty-note { text-align:center; color:var(--text-dim); font-size:.85rem; padding:30px 10px; font-style:italic; }
+  .roster-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin-top:4px; }
+  .player-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow);
+    overflow:hidden; display:flex; flex-direction:column; position:relative; }
+  .player-card.locked { background:var(--success-bg); }
+  .player-card.locked .card-body-inner { opacity:.72; }
+  .card-remove { position:absolute; top:8px; right:8px; z-index:2; width:26px; height:26px; border-radius:50%; border:none;
+    background:rgba(20,16,10,.55); color:#fff; font-size:.95rem; display:flex; align-items:center; justify-content:center; cursor:pointer; line-height:1; }
+  .card-remove.confirm { background:var(--danger); font-size:.68rem; width:auto; padding:0 8px; border-radius:13px; }
+  .card-remove:hover { background:var(--danger); }
+  .photo-wrap { aspect-ratio:1; background:var(--surface-2); position:relative; cursor:pointer; overflow:hidden; }
+  .photo-wrap img { width:100%; height:100%; object-fit:cover; object-position:center top; display:block; }
+  .photo-placeholder { width:100%; height:100%; display:flex; align-items:center; justify-content:center; font-weight:700; font-size:2.6rem; color:var(--text-dim); background:var(--surface-2); }
+  .photo-hint { position:absolute; inset:auto 0 0 0; background:linear-gradient(transparent,rgba(0,0,0,.55)); color:#fff; font-size:.66rem;
+    text-align:center; padding:14px 4px 5px; opacity:0; transition:opacity .15s; text-transform:uppercase; letter-spacing:.06em; }
+  .photo-wrap:hover .photo-hint { opacity:1; }
+  .photo-wrap.uploading::after { content:"Uploading\2026"; position:absolute; inset:0; background:rgba(20,16,10,.5); color:#fff;
+    display:flex; align-items:center; justify-content:center; font-size:.75rem; }
+  .completed-ribbon { position:absolute; top:8px; left:8px; z-index:2; background:var(--success); color:#fff; font-weight:700;
+    font-size:.72rem; text-transform:uppercase; letter-spacing:.05em; border-radius:7px; padding:4px 8px; }
+  .jersey-badge { position:absolute; top:8px; left:8px; background:var(--accent); color:var(--accent-ink); font-weight:700;
+    border-radius:8px; font-size:.95rem; line-height:1; padding:0; z-index:2; display:flex; align-items:center; }
+  .jersey-badge span { padding:6px 4px 6px 8px; }
+  .jersey-badge input { width:34px; border:none; background:transparent; color:inherit; font:inherit; padding:6px 8px 6px 0; text-align:left; }
+  .jersey-badge input:focus { outline:none; }
+  .card-body { padding:10px 12px 12px; display:flex; flex-direction:column; gap:8px; flex:1; }
+  .card-body-inner { display:flex; flex-direction:column; gap:8px; }
+  .name-input { border:none; background:transparent; font-weight:700; font-size:1.02rem; padding:2px 0; width:100%; }
+  .name-input:focus { outline:1px solid var(--border); border-radius:4px; }
+  .position-select { font-size:.74rem; padding:3px 8px; width:fit-content; background:var(--surface-2); border-radius:999px; }
+  .field-label { font-size:.66rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); margin-bottom:2px; }
+  .field { display:flex; flex-direction:column; }
+  .field input, .field select { width:100%; }
+  .id-input.has-conflict { border-color:var(--danger); background:var(--danger-bg); }
+  .status-select { font-size:.76rem; }
+  select.status-select.status-unclaimed { background:var(--surface-2); color:var(--text-dim); }
+  select.status-select.status-in_progress { background:var(--warning-bg); color:var(--warning); }
+  select.status-select.status-done { background:var(--success-bg); color:var(--success); }
+  select.status-select.status-revision { background:var(--danger-bg); color:var(--danger); }
+  .divider { border-top:1px dashed var(--border); margin:2px 0; }
+  .claim-row { display:flex; gap:6px; align-items:center; }
+  .claim-row .claimed-by { font-size:.82rem; font-weight:600; }
+  .file-list { display:flex; flex-direction:column; gap:4px; margin-top:2px; }
+  .file-chip { display:flex; align-items:center; gap:6px; background:var(--surface-2); border:1px solid var(--border); border-radius:7px; padding:4px 7px; font-size:.72rem; }
+  .file-chip .fname { flex:1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-family:monospace; }
+  .file-chip button { all:unset; cursor:pointer; color:var(--text-dim); font-size:.85rem; line-height:1; }
+  .file-chip button:hover { color:var(--danger); }
+  .card-footer-row { display:flex; gap:6px; flex-wrap:wrap; }
+  .card-footer-row button { flex:1; min-width:0; }
+  .status-msg { position:fixed; bottom:max(16px,env(safe-area-inset-bottom,0px)); left:50%; transform:translateX(-50%);
+    background:var(--danger); color:#fff; padding:10px 16px; border-radius:10px; font-size:.85rem; box-shadow:var(--shadow);
+    z-index:110; max-width:90vw; text-align:center; }
+  .status-msg.ok { background:var(--success); }
+  footer.note { color:var(--text-dim); font-size:.76rem; text-align:center; margin-top:24px; padding-bottom:12px; }
+  .gate-screen { position:fixed; inset:0; z-index:100; background:var(--bg); display:flex; align-items:center; justify-content:center; padding:20px; overflow-y:auto; }
+  .gate-card { background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:28px 24px; max-width:380px; width:100%; text-align:center; }
+  .gate-card h2 { font-size:1.4rem; margin-bottom:6px; }
+  .gate-card p { color:var(--text-dim); font-size:.86rem; line-height:1.4; margin:8px 0 16px; }
+  .gate-card input { width:100%; text-align:center; margin-bottom:10px; }
+  .gate-card button.primary { width:100%; padding:10px; }
+  .gate-pending-name { font-weight:700; font-size:1.1rem; margin:10px 0 4px; }
+  .modal-overlay { position:fixed; inset:0; z-index:90; background:rgba(15,11,5,.55); display:flex; align-items:flex-start;
+    justify-content:center; padding:30px 16px; overflow-y:auto; }
+  .modal-box { background:var(--surface); border:1px solid var(--border); border-radius:16px; box-shadow:var(--shadow); padding:20px; max-width:560px; width:100%; }
+  .modal-box h2 { font-size:1.2rem; margin-bottom:12px; }
+  .modal-close-row { display:flex; justify-content:flex-end; margin-bottom:6px; }
+  .modal-close-row button { all:unset; cursor:pointer; color:var(--text-dim); font-size:1.1rem; }
+  .admin-user-row { display:flex; align-items:center; gap:8px; padding:8px 0; border-bottom:1px solid var(--border); flex-wrap:wrap; }
+  .admin-user-row:last-child { border-bottom:none; }
+  .admin-user-row .uname { font-weight:600; flex:1; min-width:100px; }
+  .admin-user-row .umeta { font-size:.7rem; color:var(--text-dim); width:100%; }
+  .admin-section-title { font-size:.72rem; text-transform:uppercase; letter-spacing:.06em; color:var(--text-dim); margin:16px 0 4px; }
+  .preview-gallery { display:grid; grid-template-columns:repeat(auto-fill,minmax(110px,1fr)); gap:8px; }
+  .preview-gallery img { width:100%; aspect-ratio:1; object-fit:cover; border-radius:8px; border:1px solid var(--border); }
+  .preview-gallery .pv-item { position:relative; }
+  .preview-gallery .pv-remove { position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%; background:rgba(20,16,10,.6); color:#fff; border:none; font-size:.8rem; }
+  @media (max-width:420px) { .roster-grid { grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); } }
+</style>
+</head>
+<body>
+
+<header class="top">
+  <div class="brand-row">
+    <h1><span class="accent-mark">Cyberface</span> Manifest &middot; EuroLeague 2026&ndash;27</h1>
+    <div class="stat-row" id="stat-row"></div>
+  </div>
+  <div class="whoami-row" id="whoami-row"></div>
+  <div class="team-nav">
+    <button class="nav-btn" id="prev-team" aria-label="Previous team">&lsaquo;</button>
+    <div class="team-nav-center" id="team-nav-center"></div>
+    <button class="nav-btn" id="next-team" aria-label="Next team">&rsaquo;</button>
+  </div>
+  <div class="controls">
+    <input id="search" type="text" placeholder="Search this roster&hellip;">
+    <select id="filter-author"><option value="">All authors</option></select>
+    <select id="filter-status">
+      <option value="">All statuses</option>
+      <option value="unclaimed">Unclaimed</option>
+      <option value="in_progress">In progress</option>
+      <option value="done">Done</option>
+      <option value="revision">Needs revision</option>
+    </select>
+    <button class="ghost small" id="theme-toggle-btn" type="button"></button>
+  </div>
+</header>
+
+<div id="roster-area"></div>
+
+<footer class="note">Cyberface IDs are reserved across the whole manifest &mdash; claiming one already in use elsewhere will tell you who has it. Data is shared live with everyone approved on this project.</footer>
+
+<div id="toast" class="status-msg" hidden></div>
+<div id="gate-root"></div>
+<div id="modal-root"></div>
+<input type="file" id="photo-file-input" accept="image/png,image/jpeg,image/webp,image/gif" hidden>
+<input type="file" id="iff-file-input" accept=".iff" multiple hidden>
+<input type="file" id="preview-file-input" accept="image/png,image/jpeg,image/webp,image/gif" multiple hidden>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+(function () {
+  "use strict";
+
+  // ---------- config ----------
+  var SUPABASE_URL = "https://arwrniucbejsscnukhps.supabase.co";
+  var SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImFyd3JuaXVjYmVqc3NjbnVraHBzIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk4NDI0MzMsImV4cCI6MjEwNTQxODQzM30.2KvFd1o8b5nxlB3RuSA6QDjbgagN0B9tbLhSdBlSRTw";
+  var BUCKET = "cyberface-assets";
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+  var POSITIONS = ["G", "F", "C", "Coach"];
+  var MAX_PREVIEWS = 10;
+
+  // ---------- state ----------
+  var session = null;
+  var myProfile = null;          // { id, display_name, role, is_owner }
+  var profiles = [];             // everyone visible to us (approved users see all)
+  var players = [];
+  var teams = [];
+  var teamLogoPaths = {};        // slug -> logo_path
+  var brand = null;              // { logo_path }
+  var teamIndex = 0;
+  var filters = { search: "", author: "", status: "" };
+  var activeModal = null;        // 'admin' | {type:'preview', playerId} | {type:'files', playerId}
+  var previewAsAuthor = false;
+  var uploading = {};
+  var signedUrlCache = {};       // storage path -> { url, exp }
+  var authMode = "choice";       // choice | signup | signin
+  var currentTheme = "auto";
+  var playersChannel = null, profilesChannel = null, teamsChannel = null, metaChannel = null;
+
+  try {
+    var savedIdx = parseInt(localStorage.getItem("cf_team_idx_v1"), 10);
+    if (!isNaN(savedIdx) && savedIdx >= 0) teamIndex = savedIdx;
+  } catch (e) {}
+  try {
+    var savedTheme = localStorage.getItem("cf_theme_v1");
+    if (savedTheme === "light" || savedTheme === "dark" || savedTheme === "auto") currentTheme = savedTheme;
+  } catch (e) {}
+
+  function saveTeamIndex() { try { localStorage.setItem("cf_team_idx_v1", String(teamIndex)); } catch (e) {} }
+  function applyTheme() {
+    var root = document.documentElement;
+    if (currentTheme === "auto") root.removeAttribute("data-theme");
+    else root.setAttribute("data-theme", currentTheme);
+  }
+  function isDarkNow() {
+    if (currentTheme === "dark") return true;
+    if (currentTheme === "light") return false;
+    try { return window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches; } catch (e) { return false; }
+  }
+  function toggleTheme() {
+    currentTheme = isDarkNow() ? "light" : "dark";
+    try { localStorage.setItem("cf_theme_v1", currentTheme); } catch (e) {}
+    applyTheme();
+    renderWhoAmI();
+  }
+  applyTheme();
+
+  function toast(msg, ok) {
+    var el = document.getElementById("toast");
+    el.textContent = msg;
+    el.className = "status-msg" + (ok ? " ok" : "");
+    el.hidden = false;
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function () { el.hidden = true; }, 4200);
+  }
+  function escAttr(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/"/g, "&quot;").replace(/</g, "&lt;"); }
+  function escHtml(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function initials(name) {
+    var parts = (name || "").trim().split(/\s+/).filter(Boolean);
+    if (!parts.length) return "?";
+    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
+    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
+  }
+  function fmtSize(n) {
+    if (!n && n !== 0) return "";
+    if (n < 1024) return n + " B";
+    if (n < 1024 * 1024) return (n / 1024).toFixed(1) + " KB";
+    return (n / (1024 * 1024)).toFixed(1) + " MB";
+  }
+  function profileName(id) {
+    var p = profileById(id);
+    return p ? p.display_name : "";
+  }
+  function profileById(id) {
+    for (var i = 0; i < profiles.length; i++) if (profiles[i].id === id) return profiles[i];
+    return null;
+  }
+
+  // ---------- identity / roles ----------
+  function isAdmin() { if (previewAsAuthor) return false; return !!myProfile && (myProfile.role === "admin" || myProfile.is_owner); }
+  function isApprovedAuthor() { if (previewAsAuthor) return true; return isAdmin() || (myProfile && myProfile.role === "author"); }
+  function isRegisteredAndApproved() { return myProfile && (myProfile.role === "author" || myProfile.role === "admin" || myProfile.is_owner); }
+  function canEditPlayer(p) {
+    if (!p || p.locked) return false;
+    if (isAdmin()) return true;
+    if (!isApprovedAuthor()) return false;
+    return !!p.author_id && p.author_id === myProfile.id;
+  }
+  function myDisplayName() {
+    if (previewAsAuthor) return "Preview Author (You)";
+    return myProfile ? myProfile.display_name : "";
+  }
+
+  // ---------- storage helpers ----------
+  function pathSafe(id) { return /^[A-Za-z0-9_.\-:@+~]{1,64}$/.test(id); }
+  function uuid() {
+    return "id-" + Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+  async function uploadToBucket(path, fileOrBlob, contentType) {
+    var opts = { upsert: false };
+    if (contentType) opts.contentType = contentType;
+    var res = await sb.storage.from(BUCKET).upload(path, fileOrBlob, opts);
+    if (res.error) throw res.error;
+    return path;
+  }
+  async function removeFromBucket(path) {
+    try { await sb.storage.from(BUCKET).remove([path]); } catch (e) {}
+  }
+  async function getSignedUrl(path) {
+    if (!path) return null;
+    var cached = signedUrlCache[path];
+    var now = Date.now();
+    if (cached && cached.exp > now + 30000) return cached.url;
+    var res = await sb.storage.from(BUCKET).createSignedUrl(path, 3600);
+    if (res.error || !res.data) return null;
+    signedUrlCache[path] = { url: res.data.signedUrl, exp: now + 3600 * 1000 };
+    return res.data.signedUrl;
+  }
+  // Resolve a set of image paths, then re-render once they're in cache.
+  function hydrateImages(paths, onDone) {
+    var todo = paths.filter(function (p) { return p && !signedUrlCache[p]; });
+    if (!todo.length) { if (onDone) onDone(); return; }
+    Promise.all(todo.map(getSignedUrl)).then(function () { if (onDone) onDone(); });
+  }
+
+  // ---------- auth / gate ----------
+  function renderGate() {
+    var root = document.getElementById("gate-root");
+    if (!session) {
+      root.innerHTML = gateAuthHtml();
+      bindGateAuth();
+      return;
+    }
+    if (!myProfile) { root.innerHTML = ""; return; } // still loading
+    if (isRegisteredAndApproved()) { root.innerHTML = ""; return; }
+    // pending
+    root.innerHTML =
+      '<div class="gate-screen"><div class="gate-card">' +
+      '<h2>Request sent</h2>' +
+      '<p>Your access request is waiting on an admin to approve it. You’ll get in automatically once approved — just keep this tab open or come back later.</p>' +
+      '<div class="gate-pending-name">' + escHtml(myProfile.display_name) + '</div>' +
+      '<button class="ghost" id="gate-signout-btn" style="width:100%;">Sign out</button>' +
+      '</div></div>';
+    var b = document.getElementById("gate-signout-btn");
+    if (b) b.onclick = function () { sb.auth.signOut(); };
+  }
+
+  function gateAuthHtml() {
+    if (authMode === "signin") {
+      return '<div class="gate-screen"><div class="gate-card">' +
+        '<h2>Sign In</h2>' +
+        '<p>Sign back in with your email and password.</p>' +
+        '<input id="gate-email-input" type="email" placeholder="Email" autocomplete="email">' +
+        '<input id="gate-pw-input" type="password" placeholder="Password" autocomplete="current-password">' +
+        '<button class="primary" id="gate-signin-btn">Sign In</button>' +
+        '<button class="link-btn" id="gate-switch-signup" style="margin-top:10px;">New here? Request access instead</button>' +
+        '</div></div>';
+    }
+    return '<div class="gate-screen"><div class="gate-card">' +
+      '<h2>Cyberface Manifest</h2>' +
+      '<p>Enter the display name you want other authors to see, your email, and a password, then request access. An admin will approve you and assign your role.</p>' +
+      '<input id="gate-name-input" type="text" placeholder="Your name&hellip;" maxlength="40">' +
+      '<input id="gate-email-input" type="email" placeholder="Email" autocomplete="email">' +
+      '<input id="gate-pw-input" type="password" placeholder="Choose a password (min 6 characters)" autocomplete="new-password">' +
+      '<button class="primary" id="gate-request-btn">Request Access</button>' +
+      '<button class="link-btn" id="gate-switch-signin" style="margin-top:10px;">Already registered? Sign in instead</button>' +
+      '</div></div>';
+  }
+
+  function bindGateAuth() {
+    var reqBtn = document.getElementById("gate-request-btn");
+    if (reqBtn) reqBtn.onclick = async function () {
+      if (reqBtn.disabled) return;
+      reqBtn.disabled = true;
+      var origLabel = reqBtn.textContent;
+      reqBtn.textContent = "Requesting…";
+      try {
+        await requestAccess(
+          document.getElementById("gate-name-input").value,
+          document.getElementById("gate-email-input").value,
+          document.getElementById("gate-pw-input").value
+        );
+      } finally {
+        reqBtn.disabled = false;
+        reqBtn.textContent = origLabel;
+      }
+    };
+    var signinBtn = document.getElementById("gate-signin-btn");
+    if (signinBtn) signinBtn.onclick = async function () {
+      if (signinBtn.disabled) return;
+      signinBtn.disabled = true;
+      var origLabel = signinBtn.textContent;
+      signinBtn.textContent = "Signing in…";
+      try {
+        await signIn(document.getElementById("gate-email-input").value, document.getElementById("gate-pw-input").value);
+      } finally {
+        signinBtn.disabled = false;
+        signinBtn.textContent = origLabel;
+      }
+    };
+    var toSignin = document.getElementById("gate-switch-signin");
+    if (toSignin) toSignin.onclick = function () { authMode = "signin"; renderGate(); };
+    var toSignup = document.getElementById("gate-switch-signup");
+    if (toSignup) toSignup.onclick = function () { authMode = "signup"; renderGate(); };
+  }
+
+  async function requestAccess(name, email, pw) {
+    name = (name || "").trim();
+    email = (email || "").trim();
+    if (!name) { toast("Enter a name first.", false); return; }
+    if (!email) { toast("Enter an email.", false); return; }
+    if (!pw || pw.length < 6) { toast("Choose a password of at least 6 characters.", false); return; }
+    var res = await sb.auth.signUp({ email: email, password: pw });
+    if (res.error) { toast("Couldn't send request: " + res.error.message, false); return; }
+    var uid = res.data && res.data.user && res.data.user.id;
+    if (!uid) { toast("Check your email to confirm your account, then sign in.", true); authMode = "signin"; renderGate(); return; }
+    var ins = await sb.from("profiles").insert({ id: uid, display_name: name, role: "pending", is_owner: false });
+    if (ins.error) { toast("Couldn't send request: " + ins.error.message, false); return; }
+    toast("Request sent — waiting on approval.", true);
+  }
+
+  async function signIn(email, pw) {
+    email = (email || "").trim();
+    if (!email || !pw) { toast("Enter your email and password.", false); return; }
+    var res = await sb.auth.signInWithPassword({ email: email, password: pw });
+    if (res.error) { toast("Couldn't sign in: " + res.error.message, false); return; }
+  }
+
+  // ---------- whoami ----------
+  function renderWhoAmI() {
+    var el = document.getElementById("whoami-row");
+    if (!session || !myProfile) { el.innerHTML = ""; return; }
+    var bits = [];
+    if (previewAsAuthor) {
+      bits.push('<span class="role-chip author">Preview: viewing as Author</span>');
+      bits.push('<span style="color:var(--text-dim);">Actions here are still real writes to the shared data.</span>');
+    } else {
+      bits.push('Signed in as <strong>' + escHtml(myProfile.display_name) + '</strong>');
+      if (myProfile.is_owner) bits.push('<span class="role-chip admin">OWNER / ADMIN</span>');
+      else if (myProfile.role === "admin") bits.push('<span class="role-chip admin">ADMIN</span>');
+      else if (myProfile.role === "author") bits.push('<span class="role-chip author">AUTHOR</span>');
+      else bits.push('<span class="role-chip">PENDING APPROVAL</span>');
+      bits.push('<button class="link-btn" id="signout-btn">Sign out</button>');
+    }
+    if (isAdmin()) {
+      var pendingCount = profiles.filter(function (u) { return u.role === "pending"; }).length;
+      bits.push('<button class="link-btn" id="open-admin-btn">Admin panel' +
+        (pendingCount ? '<span class="pending-badge">' + pendingCount + '</span>' : '') + '</button>');
+    }
+    if (myProfile.role === "admin" || myProfile.is_owner) {
+      bits.push('<button class="link-btn" id="preview-toggle-btn">' + (previewAsAuthor ? "Exit preview" : "Preview as Author") + '</button>');
+    }
+    bits.push('<button class="ghost small" id="theme-toggle-btn2" type="button">' + (isDarkNow() ? "☀️ Light mode" : "🌙 Dark mode") + '</button>');
+    el.innerHTML = bits.join(" ");
+    var so = document.getElementById("signout-btn");
+    if (so) so.onclick = function () { sb.auth.signOut(); };
+    var adm = document.getElementById("open-admin-btn");
+    if (adm) adm.onclick = function () { activeModal = "admin"; renderModal(); };
+    var pv = document.getElementById("preview-toggle-btn");
+    if (pv) pv.onclick = function () { previewAsAuthor = !previewAsAuthor; activeModal = null; renderAll(); };
+    var tt2 = document.getElementById("theme-toggle-btn2");
+    if (tt2) tt2.onclick = toggleTheme;
+  }
+
+  // ---------- stats / team nav ----------
+  function renderStats() {
+    var total = players.length;
+    var assigned = players.filter(function (p) { return p.author_id; }).length;
+    var done = players.filter(function (p) { return p.status === "done"; }).length;
+    var locked = players.filter(function (p) { return p.locked; }).length;
+    function stat(n, l) { return '<div class="stat"><span class="n">' + n + '</span><span class="l">' + l + '</span></div>'; }
+    document.getElementById("stat-row").innerHTML =
+      stat(total, "Tracked") + stat(assigned, "Claimed") + stat(done, "Done") + stat(locked, "Completed");
+  }
+
+  function currentTeam() { return teams[teamIndex] || null; }
+
+  function renderTeamNav() {
+    var el = document.getElementById("team-nav-center");
+    var team = currentTeam();
+    if (!team) { el.innerHTML = '<div class="team-display-meta">No teams yet.</div>'; return; }
+    var logoPath = teamLogoPaths[team.slug];
+    var logoHtml = logoPath
+      ? '<img data-lazy-img="' + escAttr(logoPath) + '" alt="">'
+      : '<div class="logo-placeholder">' + escHtml((team.name || "").slice(0, 3).toUpperCase()) + '</div>';
+    el.innerHTML =
+      '<div class="team-logo-wrap">' + logoHtml + '</div>' +
+      '<div class="team-display-name">' + escHtml(team.name) + '</div>' +
+      '<div class="team-display-meta">' + escHtml(team.country || "") + ' · Team ' + (teamIndex + 1) + ' of ' + teams.length + '</div>';
+    if (logoPath) hydrateImages([logoPath], function () { applyLazyImages(el); });
+  }
+
+  function applyLazyImages(scope) {
+    (scope || document).querySelectorAll("[data-lazy-img]").forEach(function (img) {
+      var path = img.getAttribute("data-lazy-img");
+      var url = signedUrlCache[path] && signedUrlCache[path].url;
+      if (url) img.src = url;
+    });
+  }
+
+  // ---------- author filter list ----------
+  function renderAuthorControls() {
+    var sel = document.getElementById("filter-author");
+    var cur = sel.value;
+    var names = {};
+    profiles.forEach(function (p) { if (p.role === "author" || p.role === "admin") names[p.display_name] = true; });
+    players.forEach(function (p) { if (p.author_id) { var pr = profileById(p.author_id); if (pr) names[pr.display_name] = true; } });
+    var list = Object.keys(names).sort(function (a, b) { return a.localeCompare(b); });
+    sel.innerHTML = '<option value="">All authors</option>' +
+      list.map(function (a) { return '<option value="' + escAttr(a) + '">' + escHtml(a) + '</option>'; }).join("") +
+      '<option value="__unassigned">Unassigned</option>';
+    sel.value = cur;
+  }
+
+  function authorOptions(selectedId) {
+    var opts = '<option value="">Unassigned</option>';
+    profiles.filter(function (p) { return p.role === "author" || p.role === "admin"; }).forEach(function (p) {
+      opts += '<option value="' + escAttr(p.id) + '"' + (p.id === selectedId ? " selected" : "") + '>' + escHtml(p.display_name) + "</option>";
+    });
+    return opts;
+  }
+  function positionOptions(selected) {
+    var opts = '<option value="">—</option>';
+    POSITIONS.forEach(function (pos) { opts += '<option value="' + pos + '"' + (pos === selected ? " selected" : "") + '>' + pos + "</option>"; });
+    return opts;
+  }
+
+  // ---------- filtering ----------
+  function visiblePlayers() {
+    var team = currentTeam();
+    if (!team) return [];
+    return players.filter(function (p) {
+      if (p.team_slug !== team.slug) return false;
+      if (filters.search) {
+        var q = filters.search.toLowerCase();
+        if ((p.name || "").toLowerCase().indexOf(q) === -1 && (p.cyberface_id || "").toLowerCase().indexOf(q) === -1) return false;
+      }
+      if (filters.author) {
+        if (filters.author === "__unassigned") { if (p.author_id) return false; }
+        else {
+          var authorName = p.author_id ? profileName(p.author_id) : "";
+          if (authorName !== filters.author) return false;
+        }
+      }
+      if (filters.status) { if (p.status !== filters.status) return false; }
+      return true;
+    });
+  }
+
+  // ---------- roster render ----------
+  function renderRoster() {
+    var area = document.getElementById("roster-area");
+    if (!session) { area.innerHTML = ""; return; }
+    if (!isRegisteredAndApproved()) { area.innerHTML = ""; return; }
+    var team = currentTeam();
+    if (!team) { area.innerHTML = '<div class="empty-note">No teams have been set up yet. Ask an admin to add one.</div>'; return; }
+    var list = visiblePlayers();
+    var addCardHtml =
+      '<div class="add-card">' +
+      '<div class="display">+ Add Player</div>' +
+      '<input id="add-player-name" type="text" placeholder="Player name&hellip;">' +
+      '<button class="primary" id="add-player-btn">Add to ' + escHtml(team.name) + '</button>' +
+      '</div>';
+    if (!list.length) {
+      area.innerHTML = '<div class="empty-note">No players match the current filters.</div>' + (isAdmin() ? '<div class="roster-grid">' + addCardHtml + '</div>' : "");
+    } else {
+      area.innerHTML = '<div class="roster-grid">' + list.map(playerCardHtml).join("") + (isAdmin() ? addCardHtml : "") + '</div>';
+    }
+    bindRoster();
+    var imgPaths = list.map(function (p) { return p.photo_path; }).filter(Boolean);
+    if (imgPaths.length) hydrateImages(imgPaths, function () { applyLazyImages(area); });
+  }
+
+  function playerCardHtml(p) {
+    var locked = !!p.locked;
+    var canEdit = canEditPlayer(p);
+    var canEditFully = isAdmin() && !locked;
+    var canStageId = !p.author_id && !locked && isApprovedAuthor();
+    var isCoach = p.position === "Coach";
+    var isUploading = !!uploading[p.id];
+
+    var photoInner = p.photo_path
+      ? '<img data-lazy-img="' + escAttr(p.photo_path) + '" alt="">'
+      : '<div class="photo-placeholder">' + initials(p.name) + '</div>';
+
+    var badge = locked
+      ? '<div class="completed-ribbon">Completed</div>'
+      : (isCoach
+        ? '<div class="jersey-badge"><span style="padding:6px 9px;">Coach</span></div>'
+        : '<div class="jersey-badge"><span>#</span><input data-number-input="' + p.id + '" value="' + escAttr(p.number || "") + '" maxlength="3" placeholder="00"' + (canEdit ? "" : " disabled") + '></div>');
+
+    var photoTrigger = canEdit ? ' data-photo-trigger="' + p.id + '"' : '';
+
+    var authorRow;
+    if (isAdmin()) {
+      authorRow = '<div class="field"><span class="field-label">Cyberface Author</span><select data-author-select="' + p.id + '"' + (locked ? " disabled" : "") + '>' + authorOptions(p.author_id) + '</select></div>';
+    } else {
+      var myId = myProfile ? myProfile.id : null;
+      if (p.author_id && p.author_id === myId) {
+        authorRow = '<div class="field"><span class="field-label">Cyberface Author</span><div class="claim-row"><span class="claimed-by">' + escHtml(profileName(p.author_id)) + ' (you)</span>' +
+          (locked ? "" : '<button class="small ghost" data-unclaim="' + p.id + '">Unclaim</button>') + '</div></div>';
+      } else if (p.author_id) {
+        authorRow = '<div class="field"><span class="field-label">Cyberface Author</span><div class="claim-row"><span class="claimed-by">' + escHtml(profileName(p.author_id)) + '</span></div></div>';
+      } else {
+        authorRow = '<div class="field"><span class="field-label">Cyberface Author</span><div class="claim-row"><span class="claimed-by" style="color:var(--text-dim);">Unclaimed</span>' +
+          (locked ? "" : '<button class="small primary" data-claim="' + p.id + '">Claim</button>') + '</div></div>';
+      }
+    }
+
+    var files = p.files || [];
+    var filesHtml = '<div class="field"><span class="field-label">Cyberface Files (' + files.length + ')</span>';
+    if (files.length) {
+      filesHtml += '<div class="file-list">' + files.slice(0, 3).map(function (f) {
+        return '<div class="file-chip"><span class="fname" title="' + escAttr(f.file_name) + '">' + escHtml(f.file_name) + '</span><span>' + fmtSize(f.size_bytes) + '</span></div>';
+      }).join("") + (files.length > 3 ? '<button class="small ghost" data-view-files="' + p.id + '">+' + (files.length - 3) + ' more&hellip;</button>' : '') + '</div>';
+    }
+    filesHtml += '</div>';
+
+    var previews = p.previews || [];
+    var canUploadPreviews = canEdit;
+
+    var footerBtns = '<div class="card-footer-row">';
+    if (canEdit) footerBtns += '<button class="small ghost" data-upload-iff="' + p.id + '">Upload .iff</button>';
+    if (files.length) footerBtns += '<button class="small ghost" data-view-files="' + p.id + '">View Files</button>';
+    if (canUploadPreviews && !locked) footerBtns += '<button class="small ghost" data-upload-preview="' + p.id + '">Upload Previews' + (previews.length ? " (" + previews.length + ")" : "") + '</button>';
+    if (previews.length) footerBtns += '<button class="small ghost" data-view-preview="' + p.id + '">Preview</button>';
+    footerBtns += '</div>';
+
+    var completeBtns = "";
+    var canComplete = !locked && p.author_id && (isAdmin() || p.author_id === (myProfile && myProfile.id));
+    var canUnlock = locked && isAdmin();
+    if (canComplete) completeBtns = '<button class="small primary" data-mark-complete="' + p.id + '" style="width:100%;">Mark Completed</button>';
+    else if (canUnlock) completeBtns = '<button class="small danger-outline" data-unlock="' + p.id + '" style="width:100%;">Unlock</button>';
+
+    var removeBtn = isAdmin() ? '<button class="card-remove" data-remove-player="' + p.id + '" title="Remove player">×</button>' : "";
+
+    return '<div class="player-card' + (locked ? " locked" : "") + '" data-player="' + p.id + '">' +
+      removeBtn +
+      '<div class="photo-wrap' + (isUploading ? " uploading" : "") + '"' + photoTrigger + '>' + photoInner +
+      badge + (canEdit ? '<div class="photo-hint">Click to change photo</div>' : '') + '</div>' +
+      '<div class="card-body"><div class="card-body-inner">' +
+      '<input class="name-input" data-name-input="' + p.id + '" value="' + escAttr(p.name) + '" maxlength="80" placeholder="Player name"' + (canEditFully ? "" : " disabled") + '>' +
+      '<select class="position-select" data-position-select="' + p.id + '"' + (canEditFully ? "" : " disabled") + '>' + positionOptions(p.position) + '</select>' +
+      '<div class="divider"></div>' +
+      authorRow +
+      '<div class="field"><span class="field-label">Cyberface ID</span><input class="id-input mono" data-id-input="' + p.id + '" placeholder="e.g. 1044" value="' + escAttr(p.cyberface_id || "") + '" maxlength="64"' + ((canEdit || canStageId) ? "" : " disabled") + '>' +
+      '</div>' +
+      '<div class="field"><span class="field-label">Status</span><select class="status-select status-' + p.status + '" data-status-select="' + p.id + '"' + (canEdit ? "" : " disabled") + '>' +
+      ["unclaimed", "in_progress", "done", "revision"].map(function (s) {
+        var labels = { unclaimed: "Unclaimed", in_progress: "In progress", done: "Done", revision: "Needs revision" };
+        return '<option value="' + s + '"' + (s === p.status ? " selected" : "") + '>' + labels[s] + '</option>';
+      }).join("") + '</select></div>' +
+      filesHtml +
+      '</div>' + footerBtns + completeBtns + '</div></div>';
+  }
+
+  function bindRoster() {
+    var area = document.getElementById("roster-area");
+
+    area.querySelectorAll("[data-photo-trigger]").forEach(function (el) {
+      el.onclick = function () {
+        var id = el.getAttribute("data-photo-trigger");
+        var player = players.filter(function (p) { return p.id === id; })[0];
+        if (player && canEditPlayer(player)) { window._photoTarget = id; document.getElementById("photo-file-input").click(); }
+      };
+    });
+
+    area.querySelectorAll("[data-number-input]").forEach(function (input) {
+      input.onblur = function () {
+        var id = input.getAttribute("data-number-input");
+        var player = players.filter(function (p) { return p.id === id; })[0];
+        if (player && canEditPlayer(player) && input.value.trim() !== (player.number || "")) updatePlayerField(player, "number", input.value.trim());
+      };
+      input.onkeydown = function (e) { if (e.key === "Enter") input.blur(); };
+    });
+
+    area.querySelectorAll("[data-id-input]").forEach(function (input) {
+      input.onblur = function () {
+        var id = input.getAttribute("data-id-input");
+        var player = players.filter(function (p) { return p.id === id; })[0];
+        if (player && player.author_id) claimCyberfaceId(player, input.value);
+      };
+      input.onkeydown = function (e) { if (e.key === "Enter") input.blur(); };
+    });
+
+    area.querySelectorAll("[data-name-input]").forEach(function (input) {
+      input.onblur = function () {
+        var id = input.getAttribute("data-name-input");
+        var player = players.filter(function (p) { return p.id === id; })[0];
+        if (player && input.value.trim() && input.value.trim() !== player.name) updatePlayerField(player, "name", input.value.trim());
+      };
+      input.onkeydown = function (e) { if (e.key === "Enter") input.blur(); };
+    });
+
+    area.querySelectorAll("[data-position-select]").forEach(function (sel) {
+      sel.onchange = function () {
+        var id = sel.getAttribute("data-position-select");
+        var player = players.filter(function (p) { return p.id === id; })[0];
+        if (player) updatePlayerField(player, "position", sel.value);
+      };
+    });
+
+    area.querySelectorAll("[data-status-select]").forEach(function (sel) {
+      sel.onchange = function () {
+        var id = sel.getAttribute("data-status-select");
+        var player = players.filter(function (p) { return p.id === id; })[0];
+        if (player && canEditPlayer(player)) updatePlayerField(player, "status", sel.value);
+      };
+    });
+
+    area.querySelectorAll("[data-author-select]").forEach(function (sel) {
+      sel.onchange = function () {
+        var id = sel.getAttribute("data-author-select");
+        var player = players.filter(function (p) { return p.id === id; })[0];
+        if (!player) return;
+        if (sel.value && !player.author_id && !(player.cyberface_id && player.cyberface_id.trim())) {
+          toast("Set this player's Cyberface ID before assigning an author.", false);
+          sel.value = player.author_id || "";
+          return;
+        }
+        updatePlayerField(player, "author_id", sel.value || null);
+      };
+    });
+
+    area.querySelectorAll("[data-claim]").forEach(function (btn) {
+      btn.onclick = function () {
+        var id = btn.getAttribute("data-claim");
+        var player = players.filter(function (p) { return p.id === id; })[0];
+        if (player) claimPlayer(player);
+      };
+    });
+    area.querySelectorAll("[data-unclaim]").forEach(function (btn) {
+      btn.onclick = function () {
+        var id = btn.getAttribute("data-unclaim");
+        var player = players.filter(function (p) { return p.id === id; })[0];
+        if (player) updatePlayerField(player, "author_id", null);
+      };
+    });
+
+    area.querySelectorAll("[data-mark-complete]").forEach(function (btn) {
+      btn.onclick = function () {
+        var id = btn.getAttribute("data-mark-complete");
+        var player = players.filter(function (p) { return p.id === id; })[0];
+        if (player) markCompleted(player);
+      };
+    });
+    area.querySelectorAll("[data-unlock]").forEach(function (btn) {
+      btn.onclick = function () {
+        var id = btn.getAttribute("data-unlock");
+        var player = players.filter(function (p) { return p.id === id; })[0];
+        if (player) unlockPlayer(player);
+      };
+    });
+
+    area.querySelectorAll("[data-remove-player]").forEach(function (btn) {
+      btn.onclick = function () {
+        var id = btn.getAttribute("data-remove-player");
+        if (btn.classList.contains("confirm")) {
+          var player = players.filter(function (p) { return p.id === id; })[0];
+          if (player) removePlayer(player);
+        } else {
+          btn.classList.add("confirm"); btn.textContent = "confirm";
+          setTimeout(function () { btn.classList.remove("confirm"); btn.textContent = "×"; }, 2500);
+        }
+      };
+    });
+
+    area.querySelectorAll("[data-upload-iff]").forEach(function (btn) {
+      btn.onclick = function () { window._iffTarget = btn.getAttribute("data-upload-iff"); document.getElementById("iff-file-input").click(); };
+    });
+    area.querySelectorAll("[data-view-files]").forEach(function (btn) {
+      btn.onclick = function () { activeModal = { type: "files", playerId: btn.getAttribute("data-view-files") }; renderModal(); };
+    });
+    area.querySelectorAll("[data-upload-preview]").forEach(function (btn) {
+      btn.onclick = function () { window._previewTarget = btn.getAttribute("data-upload-preview"); document.getElementById("preview-file-input").click(); };
+    });
+    area.querySelectorAll("[data-view-preview]").forEach(function (btn) {
+      btn.onclick = function () { activeModal = { type: "preview", playerId: btn.getAttribute("data-view-preview") }; renderModal(); };
+    });
+
+    var addBtn = document.getElementById("add-player-btn");
+    if (addBtn) addBtn.onclick = function () {
+      var input = document.getElementById("add-player-name");
+      var team = currentTeam();
+      if (team) addPlayer(team.slug, team.name, input.value);
+      input.value = "";
+    };
+  }
+
+  // ---------- claim / cyberface id ----------
+  async function reserveCyberfaceId(player, newId) {
+    if (!pathSafe(newId)) return { ok: false, message: "ID can only use letters, numbers, and _ - . : @ + ~" };
+    return { ok: true };
+  }
+
+  async function claimCyberfaceId(player, newId) {
+    newId = (newId || "").trim();
+    if (!canEditPlayer(player)) { toast("Only the author who claimed this player (or an admin) can set their cyberface ID.", false); renderRoster(); return; }
+    if (newId === (player.cyberface_id || "")) return;
+    if (newId === "") { toast("A claimed player must have a Cyberface ID. Unclaim instead if you want to release it.", false); renderRoster(); return; }
+    var check = await reserveCyberfaceId(player, newId);
+    if (!check.ok) { toast(check.message, false); renderRoster(); return; }
+    var res = await sb.from("players").update({ cyberface_id: newId }).eq("id", player.id);
+    if (res.error) {
+      if (res.error.code === "23505") toast('Cyberface ID "' + newId + '" is already in use by another player.', false);
+      else toast("Couldn't save that ID: " + res.error.message, false);
+      renderRoster();
+      return;
+    }
+    toast('Cyberface ID "' + newId + '" reserved for ' + player.name + ".", true);
+  }
+
+  async function claimPlayer(player) {
+    if (!myProfile) return;
+    var idInput = document.querySelector('[data-id-input="' + player.id + '"]');
+    var idVal = (idInput ? idInput.value : (player.cyberface_id || "")).trim();
+    if (!idVal) { toast("Enter a Cyberface ID before claiming this player.", false); if (idInput) idInput.focus(); return; }
+    var check = await reserveCyberfaceId(player, idVal);
+    if (!check.ok) { toast(check.message, false); return; }
+    var res = await sb.from("players").update({ author_id: myProfile.id, cyberface_id: idVal }).eq("id", player.id);
+    if (res.error) {
+      if (res.error.code === "23505") toast('Cyberface ID "' + idVal + '" is already in use by another player.', false);
+      else toast("Couldn't claim: " + res.error.message, false);
+      return;
+    }
+    toast(player.name + ' claimed with Cyberface ID "' + idVal + '".', true);
+  }
+
+  async function updatePlayerField(player, field, value) {
+    var body = {}; body[field] = value;
+    var res = await sb.from("players").update(body).eq("id", player.id);
+    if (res.error) toast("Couldn't save: " + res.error.message, false);
+  }
+
+  async function markCompleted(player) {
+    var res = await sb.from("players").update({ locked: true, completed_by: myProfile.id, completed_at: new Date().toISOString() }).eq("id", player.id);
+    if (res.error) toast("Couldn't mark completed: " + res.error.message, false);
+    else toast(player.name + " marked completed.", true);
+  }
+  async function unlockPlayer(player) {
+    var res = await sb.from("players").update({ locked: false }).eq("id", player.id);
+    if (res.error) toast("Couldn't unlock: " + res.error.message, false);
+    else toast(player.name + " unlocked.", true);
+  }
+
+  async function addPlayer(teamSlug, teamName, name) {
+    name = (name || "").trim();
+    if (!name) return;
+    var res = await sb.from("players").insert({ team_slug: teamSlug, name: name, status: "unclaimed" });
+    if (res.error) toast("Couldn't add player: " + res.error.message, false);
+  }
+  async function removePlayer(player) {
+    (player.files || []).forEach(function (f) { removeFromBucket(f.storage_path); });
+    (player.previews || []).forEach(function (pv) { removeFromBucket(pv.storage_path); });
+    if (player.photo_path) removeFromBucket(player.photo_path);
+    var res = await sb.from("players").delete().eq("id", player.id);
+    if (res.error) toast("Couldn't remove player: " + res.error.message, false);
+  }
+
+  // ---------- photo / file uploads ----------
+  document.getElementById("photo-file-input").addEventListener("change", async function (e) {
+    var file = e.target.files[0]; var playerId = window._photoTarget; e.target.value = "";
+    if (!file || !playerId) return;
+    var player = players.filter(function (p) { return p.id === playerId; })[0];
+    if (!player || !canEditPlayer(player)) { toast("Only the author who claimed this player (or an admin) can change their photo.", false); return; }
+    uploading[playerId] = true; renderRoster();
+    try {
+      var ext = (file.name.split(".").pop() || "png").toLowerCase();
+      var path = "players/" + playerId + "/photo/" + Date.now() + "." + ext;
+      await uploadToBucket(path, file, file.type);
+      var oldPath = player.photo_path;
+      var res = await sb.from("players").update({ photo_path: path }).eq("id", playerId);
+      if (res.error) throw res.error;
+      if (oldPath) removeFromBucket(oldPath);
+    } catch (err) { toast("Couldn't upload photo: " + (err && err.message ? err.message : "unknown error"), false); }
+    finally { delete uploading[playerId]; renderRoster(); }
+  });
+
+  document.getElementById("iff-file-input").addEventListener("change", async function (e) {
+    var files = Array.prototype.slice.call(e.target.files); var playerId = window._iffTarget; e.target.value = "";
+    if (!files.length || !playerId) return;
+    var player = players.filter(function (p) { return p.id === playerId; })[0];
+    if (!player || !canEditPlayer(player)) { toast("Only the author who claimed this player (or an admin) can upload files for them.", false); return; }
+    uploading[playerId] = true; renderRoster();
+    try {
+      for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        var path = "players/" + playerId + "/files/" + uuid() + "-" + file.name;
+        await uploadToBucket(path, file, "application/octet-stream");
+        var ins = await sb.from("player_files").insert({ player_id: playerId, storage_path: path, file_name: file.name, size_bytes: file.size, uploaded_by: myProfile.id });
+        if (ins.error) throw ins.error;
+      }
+      toast(files.length + " file" + (files.length === 1 ? "" : "s") + " uploaded.", true);
+    } catch (err) { toast("Couldn't upload files: " + (err && err.message ? err.message : "unknown error"), false); }
+    finally { delete uploading[playerId]; renderRoster(); renderModal(); }
+  });
+
+  document.getElementById("preview-file-input").addEventListener("change", async function (e) {
+    var files = Array.prototype.slice.call(e.target.files); var playerId = window._previewTarget; e.target.value = "";
+    if (!files.length || !playerId) return;
+    var player = players.filter(function (p) { return p.id === playerId; })[0];
+    if (!player || !canEditPlayer(player)) { toast("Only the author who claimed this player (or an admin) can add previews for them.", false); return; }
+    var room = MAX_PREVIEWS - (player.previews || []).length;
+    if (room <= 0) { toast("This player already has the maximum of " + MAX_PREVIEWS + " preview photos.", false); return; }
+    files = files.slice(0, room);
+    try {
+      for (var i = 0; i < files.length; i++) {
+        var file = files[i];
+        var path = "players/" + playerId + "/previews/" + uuid() + "-" + file.name;
+        await uploadToBucket(path, file, file.type);
+        var ins = await sb.from("player_previews").insert({ player_id: playerId, storage_path: path, uploaded_by: myProfile.id });
+        if (ins.error) throw ins.error;
+      }
+      toast(files.length + " preview photo" + (files.length === 1 ? "" : "s") + " added.", true);
+    } catch (err) { toast("Couldn't upload previews: " + (err && err.message ? err.message : "unknown error"), false); }
+    finally { renderRoster(); renderModal(); }
+  });
+
+  async function removeCyberfaceFile(player, fileRow) {
+    var res = await sb.from("player_files").delete().eq("id", fileRow.id);
+    if (res.error) { toast("Couldn't remove file: " + res.error.message, false); return; }
+    removeFromBucket(fileRow.storage_path);
+    renderModal();
+  }
+  async function removePreviewPhoto(player, pvRow) {
+    var res = await sb.from("player_previews").delete().eq("id", pvRow.id);
+    if (res.error) { toast("Couldn't remove photo: " + res.error.message, false); return; }
+    removeFromBucket(pvRow.storage_path);
+    renderModal(); renderRoster();
+  }
+
+  // ---------- modals ----------
+  function renderModal() {
+    var root = document.getElementById("modal-root");
+    if (!activeModal) { root.innerHTML = ""; return; }
+    if (activeModal === "admin") { root.innerHTML = adminModalHtml(); bindSimpleModalClose(); bindAdminModal(); return; }
+    if (activeModal.type === "preview") {
+      var p = players.filter(function (x) { return x.id === activeModal.playerId; })[0];
+      if (!p) { activeModal = null; root.innerHTML = ""; return; }
+      root.innerHTML = previewModalHtml(p); bindSimpleModalClose(); bindPreviewModal(p);
+      var pvPaths = (p.previews || []).map(function (pv) { return pv.storage_path; });
+      if (pvPaths.length) hydrateImages(pvPaths, function () { applyLazyImages(root); });
+      return;
+    }
+    if (activeModal.type === "files") {
+      var p2 = players.filter(function (x) { return x.id === activeModal.playerId; })[0];
+      if (!p2) { activeModal = null; root.innerHTML = ""; return; }
+      root.innerHTML = filesModalHtml(p2); bindSimpleModalClose(); bindFilesModal(p2);
+      return;
+    }
+  }
+  function bindSimpleModalClose() {
+    var root = document.getElementById("modal-root");
+    var overlay = root.querySelector(".modal-overlay");
+    if (overlay) overlay.onclick = function (e) { if (e.target === overlay) { activeModal = null; renderModal(); } };
+    var closeBtn = root.querySelector("[data-modal-close]");
+    if (closeBtn) closeBtn.onclick = function () { activeModal = null; renderModal(); };
+  }
+
+  function previewModalHtml(p) {
+    var previews = p.previews || [];
+    var canManage = canEditPlayer(p);
+    var html = '<div class="modal-overlay"><div class="modal-box">' +
+      '<div class="modal-close-row"><button data-modal-close>✕</button></div>' +
+      '<h2>' + escHtml(p.name) + ' — Previews</h2>';
+    if (!previews.length) html += '<div style="color:var(--text-dim);font-size:.85rem;">No preview photos yet.</div>';
+    else {
+      html += '<div class="preview-gallery">' + previews.map(function (pv) {
+        return '<div class="pv-item"><img data-lazy-img="' + escAttr(pv.storage_path) + '" alt="">' +
+          (canManage ? '<button class="pv-remove" data-remove-preview="' + pv.id + '">×</button>' : '') + '</div>';
+      }).join("") + '</div>';
+    }
+    if (canManage) html += '<button class="primary" data-add-more-previews style="width:100%;margin-top:12px;">Add photos (' + previews.length + '/' + MAX_PREVIEWS + ')</button>';
+    html += '</div></div>';
+    return html;
+  }
+  function bindPreviewModal(p) {
+    var root = document.getElementById("modal-root");
+    root.querySelectorAll("[data-remove-preview]").forEach(function (btn) {
+      btn.onclick = function () {
+        var pv = (p.previews || []).filter(function (x) { return x.id === btn.getAttribute("data-remove-preview"); })[0];
+        if (pv) removePreviewPhoto(p, pv);
+      };
+    });
+    var addBtn = root.querySelector("[data-add-more-previews]");
+    if (addBtn) addBtn.onclick = function () { window._previewTarget = p.id; document.getElementById("preview-file-input").click(); };
+  }
+
+  function filesModalHtml(p) {
+    var files = p.files || [];
+    var canManage = canEditPlayer(p);
+    var html = '<div class="modal-overlay"><div class="modal-box">' +
+      '<div class="modal-close-row"><button data-modal-close>✕</button></div>' +
+      '<h2>' + escHtml(p.name) + ' — Cyberface Files</h2>';
+    if (!files.length) html += '<div style="color:var(--text-dim);font-size:.85rem;">No files uploaded yet.</div>';
+    else {
+      html += '<div class="file-list">' + files.map(function (f) {
+        var canDeleteThis = canManage || f.uploaded_by === (myProfile && myProfile.id);
+        return '<div class="file-chip"><span class="fname" title="' + escAttr(f.file_name) + '">' + escHtml(f.file_name) + '</span><span>' + fmtSize(f.size_bytes) + '</span>' +
+          '<span style="color:var(--text-dim);">' + escHtml(profileName(f.uploaded_by) || "") + '</span>' +
+          (canDeleteThis ? '<button data-remove-file="' + f.id + '" title="Remove">×</button>' : '') + '</div>';
+      }).join("") + '</div>';
+    }
+    if (canManage) html += '<button class="primary" data-add-more-files style="width:100%;margin-top:12px;">Upload more .iff files</button>';
+    html += '</div></div>';
+    return html;
+  }
+  function bindFilesModal(p) {
+    var root = document.getElementById("modal-root");
+    root.querySelectorAll("[data-remove-file]").forEach(function (btn) {
+      btn.onclick = function () {
+        var f = (p.files || []).filter(function (x) { return x.id === btn.getAttribute("data-remove-file"); })[0];
+        if (f) removeCyberfaceFile(p, f);
+      };
+    });
+    var addBtn = root.querySelector("[data-add-more-files]");
+    if (addBtn) addBtn.onclick = function () { window._iffTarget = p.id; document.getElementById("iff-file-input").click(); };
+  }
+
+  function adminModalHtml() {
+    var pending = profiles.filter(function (u) { return u.role === "pending"; });
+    var approved = profiles.filter(function (u) { return u.role === "author" || u.role === "admin"; });
+    var html = '<div class="modal-overlay"><div class="modal-box">' +
+      '<div class="modal-close-row"><button data-modal-close>✕</button></div>' +
+      '<h2>Admin Panel</h2>' +
+      '<div class="admin-section-title">Pending requests (' + pending.length + ')</div>';
+    html += pending.length ? pending.map(function (u) {
+      return '<div class="admin-user-row"><span class="uname">' + escHtml(u.display_name) + '</span>' +
+        '<button class="small primary" data-approve-author="' + u.id + '">Approve as Author</button>' +
+        '<button class="small ghost" data-approve-admin="' + u.id + '">Approve as Admin</button>' +
+        '<button class="small danger-outline" data-deny="' + u.id + '">Deny</button></div>';
+    }).join("") : '<div style="color:var(--text-dim);font-size:.85rem;">No pending requests.</div>';
+
+    html += '<div class="admin-section-title">Approved users (' + approved.length + ')</div>';
+    html += approved.length ? approved.map(function (u) {
+      return '<div class="admin-user-row"><span class="uname">' + escHtml(u.display_name) + (u.role === "admin" ? " (admin)" : "") + '</span>' +
+        (u.role !== "admin" ? '<button class="small ghost" data-make-admin="' + u.id + '">Make Admin</button>' : '<button class="small ghost" data-make-author="' + u.id + '">Make Author</button>') +
+        '<button class="small danger-outline" data-revoke="' + u.id + '">Revoke</button></div>';
+    }).join("") : '<div style="color:var(--text-dim);font-size:.85rem;">No approved users yet.</div>';
+
+    html += '</div></div>';
+    return html;
+  }
+  function bindAdminModal() {
+    var root = document.getElementById("modal-root");
+    async function setRole(id, role) {
+      var res = await sb.from("profiles").update({ role: role }).eq("id", id);
+      if (res.error) toast("Couldn't update: " + res.error.message, false);
+      else renderModal();
+    }
+    root.querySelectorAll("[data-approve-author]").forEach(function (b) { b.onclick = function () { setRole(b.getAttribute("data-approve-author"), "author"); }; });
+    root.querySelectorAll("[data-approve-admin]").forEach(function (b) { b.onclick = function () { setRole(b.getAttribute("data-approve-admin"), "admin"); }; });
+    root.querySelectorAll("[data-make-admin]").forEach(function (b) { b.onclick = function () { setRole(b.getAttribute("data-make-admin"), "admin"); }; });
+    root.querySelectorAll("[data-make-author]").forEach(function (b) { b.onclick = function () { setRole(b.getAttribute("data-make-author"), "author"); }; });
+    root.querySelectorAll("[data-deny],[data-revoke]").forEach(function (b) {
+      b.onclick = async function () {
+        var id = b.getAttribute("data-deny") || b.getAttribute("data-revoke");
+        var res = await sb.from("profiles").delete().eq("id", id);
+        if (res.error) toast("Couldn't remove: " + res.error.message, false);
+        else renderModal();
+      };
+    });
+  }
+
+  // ---------- data loading + realtime ----------
+  async function loadProfiles() {
+    var res = await sb.from("profiles").select("*");
+    if (!res.error) { profiles = res.data || []; }
+  }
+  async function loadTeams() {
+    var res = await sb.from("teams").select("*").order("name");
+    if (!res.error) {
+      teams = res.data || [];
+      teamLogoPaths = {};
+      teams.forEach(function (t) { if (t.logo_path) teamLogoPaths[t.slug] = t.logo_path; });
+      if (teamIndex >= teams.length) teamIndex = 0;
+    }
+  }
+  async function loadPlayers() {
+    var res = await sb.from("players").select("*, player_files(*), player_previews(*)").order("name");
+    if (!res.error) {
+      players = (res.data || []).map(function (row) {
+        row.files = row.player_files || [];
+        row.previews = row.player_previews || [];
+        return row;
+      });
+    }
+  }
+
+  function subscribeRealtime() {
+    if (playersChannel) sb.removeChannel(playersChannel);
+    if (profilesChannel) sb.removeChannel(profilesChannel);
+    if (teamsChannel) sb.removeChannel(teamsChannel);
+    playersChannel = sb.channel("players-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "players" }, async function () { await loadPlayers(); renderAll(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "player_files" }, async function () { await loadPlayers(); renderAll(); })
+      .on("postgres_changes", { event: "*", schema: "public", table: "player_previews" }, async function () { await loadPlayers(); renderAll(); })
+      .subscribe();
+    profilesChannel = sb.channel("profiles-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "profiles" }, async function () { await loadProfiles(); await refreshMyProfile(); renderAll(); })
+      .subscribe();
+    teamsChannel = sb.channel("teams-changes")
+      .on("postgres_changes", { event: "*", schema: "public", table: "teams" }, async function () { await loadTeams(); renderAll(); })
+      .subscribe();
+  }
+
+  async function refreshMyProfile() {
+    if (!session) { myProfile = null; return; }
+    var res = await sb.from("profiles").select("*").eq("id", session.user.id).maybeSingle();
+    myProfile = res.data || null;
+  }
+
+  // ---------- render orchestration ----------
+  function renderAll() {
+    renderWhoAmI();
+    renderGate();
+    renderStats();
+    renderTeamNav();
+    renderAuthorControls();
+    renderRoster();
+    renderModal();
+  }
+
+  document.getElementById("prev-team").onclick = function () { if (!teams.length) return; teamIndex = (teamIndex - 1 + teams.length) % teams.length; saveTeamIndex(); renderTeamNav(); renderRoster(); };
+  document.getElementById("next-team").onclick = function () { if (!teams.length) return; teamIndex = (teamIndex + 1) % teams.length; saveTeamIndex(); renderTeamNav(); renderRoster(); };
+  document.getElementById("search").addEventListener("input", function (e) { filters.search = e.target.value; renderRoster(); });
+  document.getElementById("filter-author").addEventListener("change", function (e) { filters.author = e.target.value; renderRoster(); });
+  document.getElementById("filter-status").addEventListener("change", function (e) { filters.status = e.target.value; renderRoster(); });
+  document.getElementById("theme-toggle-btn").addEventListener("click", toggleTheme);
+
+  // ---------- boot ----------
+  async function boot() {
+    var initial = await sb.auth.getSession();
+    session = initial.data && initial.data.session;
+    if (session) { await refreshMyProfile(); await Promise.all([loadProfiles(), loadTeams(), loadPlayers()]); subscribeRealtime(); }
+    renderAll();
+
+    sb.auth.onAuthStateChange(async function (event, newSession) {
+      session = newSession;
+      if (session) {
+        await refreshMyProfile();
+        await Promise.all([loadProfiles(), loadTeams(), loadPlayers()]);
+        subscribeRealtime();
+      } else {
+        myProfile = null; profiles = []; players = []; teams = [];
+        if (playersChannel) sb.removeChannel(playersChannel);
+        if (profilesChannel) sb.removeChannel(profilesChannel);
+        if (teamsChannel) sb.removeChannel(teamsChannel);
+      }
+      renderAll();
+    });
+  }
+  boot();
+})();
+</script>
+</body>
+</html>
