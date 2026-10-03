@@ -1132,7 +1132,6 @@
     try {
       var zip = new JSZip();
       var manifestRows = ["team,player,cyberface_id,filename,uploaded_by"];
-      var usedNames = {};
       for (var i = 0; i < completedPlayers.length; i++) {
         var p = completedPlayers[i];
         var team = teams.filter(function (t) { return t.slug === p.team_slug; })[0];
@@ -1140,19 +1139,9 @@
           var f = p.files[j];
           var dl = await sb.storage.from(BUCKET).download(f.storage_path);
           if (dl.error) { toast("Couldn't fetch " + f.file_name + " — skipped.", false); continue; }
-          // Every file goes in one flat folder, same as the old tool. Different
-          // players can end up with same-named files (e.g. everyone's "cyberface.iff"),
-          // so prefix with the player's cyberface ID to keep names unique and
-          // traceable back to who it belongs to without opening manifest.csv.
-          var rawName = f.file_name || ((p.cyberface_id || p.id) + ".iff");
-          var safeName = (p.cyberface_id || p.id) + "_" + rawName;
-          if (usedNames[safeName]) {
-            usedNames[safeName]++;
-            var extIdx = safeName.lastIndexOf(".");
-            safeName = (extIdx > 0 ? safeName.slice(0, extIdx) : safeName) + "_" + usedNames[safeName] + (extIdx > 0 ? safeName.slice(extIdx) : "");
-          } else {
-            usedNames[safeName] = 1;
-          }
+          // Every file goes in one flat folder, exactly as uploaded -- no
+          // renaming, no prefix, no suffix, same as the old tool.
+          var safeName = f.file_name || ((p.cyberface_id || p.id) + ".iff");
           zip.file(safeName, dl.data);
           manifestRows.push([team ? team.name : p.team_slug, p.name, p.cyberface_id || "", safeName, profileName(f.uploaded_by) || ""].map(function (v) {
             return '"' + String(v).replace(/"/g, '""') + '"';
