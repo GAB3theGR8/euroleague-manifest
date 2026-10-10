@@ -91,6 +91,12 @@
   details.authors summary::-webkit-details-marker { display:none; }
   .empty-note { text-align:center; color:var(--text-dim); font-size:.85rem; padding:30px 10px; font-style:italic; }
   .roster-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(220px,1fr)); gap:14px; margin-top:4px; }
+  .roster-section { margin-top:26px; }
+  .roster-section:first-child { margin-top:8px; }
+  .section-title { display:flex; align-items:baseline; gap:8px; font-size:.8rem; text-transform:uppercase; letter-spacing:.08em; color:var(--text-dim); margin:0 0 10px; padding-bottom:6px; border-bottom:1px solid var(--border); }
+  .section-title .count { font-size:.72rem; opacity:.7; }
+  .add-card { border:1.5px dashed var(--border); border-radius:12px; padding:14px; display:flex; flex-direction:column; gap:8px; justify-content:center; min-height:120px; }
+  .add-card .display { font-weight:700; font-size:.85rem; letter-spacing:.04em; text-transform:uppercase; }
   .player-card { background:var(--surface); border:1px solid var(--border); border-radius:14px; box-shadow:var(--shadow);
     overflow:hidden; display:flex; flex-direction:column; position:relative; }
   .player-card.locked { background:var(--success-bg); }
@@ -221,7 +227,17 @@
   var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
   var POSITIONS = ["G", "F", "C", "Coach"];
-  var MAX_PREVIEWS = 10;
+  var STAFF_SLUG = "staff";
+  var STAFF_POSITIONS = ["Referee", "Commissioner", "NPC", "Other"];
+  // Cards are sorted into sections by what they are: a "Coach" position is a
+  // coach, a "Jersey" position is a jersey (files only, no cyberface ID), and
+  // everything on the Staff page is staff. Everything else is a player.
+  function cardKind(p) {
+    if (p.team_slug === STAFF_SLUG) return "staff";
+    if (p.position === "Jersey") return "jersey";
+    if (p.position === "Coach") return "coach";
+    return "player";
+  }  var MAX_PREVIEWS = 10;
 
   // ---------- state ----------
   var session = null;
@@ -517,10 +533,14 @@
     var logoHtml = logoPath
       ? '<img data-lazy-img="' + escAttr(logoPath) + '" alt="">'
       : '<div class="logo-placeholder">' + escHtml((team.name || "").slice(0, 3).toUpperCase()) + '</div>';
+    var realTeams = teams.filter(function (t) { return t.slug !== STAFF_SLUG; }).length;
+    var meta = team.slug === STAFF_SLUG
+      ? "Referees, commissioners &amp; NPCs"
+      : escHtml(team.country || "") + ' · Team ' + (teamIndex + 1) + ' of ' + realTeams;
     el.innerHTML =
       '<div class="team-logo-wrap">' + logoHtml + '</div>' +
       '<div class="team-display-name">' + escHtml(team.name) + '</div>' +
-      '<div class="team-display-meta">' + escHtml(team.country || "") + ' · Team ' + (teamIndex + 1) + ' of ' + teams.length + '</div>';
+      '<div class="team-display-meta">' + meta + '</div>';
     if (logoPath) hydrateImages([logoPath], function () { applyLazyImages(el); });
   }
 
@@ -553,9 +573,9 @@
     });
     return opts;
   }
-  function positionOptions(selected) {
+  function positionOptions(selected, kind) {
     var opts = '<option value="">—</option>';
-    POSITIONS.forEach(function (pos) { opts += '<option value="' + pos + '"' + (pos === selected ? " selected" : "") + '>' + pos + "</option>"; });
+    (kind === "staff" ? STAFF_POSITIONS : POSITIONS).forEach(function (pos) { opts += '<option value="' + pos + '"' + (pos === selected ? " selected" : "") + '>' + pos + "</option>"; });
     return opts;
   }
 
@@ -589,17 +609,35 @@
     var team = currentTeam();
     if (!team) { area.innerHTML = '<div class="empty-note">No teams have been set up yet. Ask an admin to add one.</div>'; return; }
     var list = visiblePlayers();
-    var addCardHtml =
-      '<div class="add-card">' +
-      '<div class="display">+ Add Player</div>' +
-      '<input id="add-player-name" type="text" placeholder="Player name&hellip;">' +
-      '<button class="primary" id="add-player-btn">Add to ' + escHtml(team.name) + '</button>' +
-      '</div>';
-    if (!list.length) {
-      area.innerHTML = '<div class="empty-note">No players match the current filters.</div>' + (isAdmin() ? '<div class="roster-grid">' + addCardHtml + '</div>' : "");
-    } else {
-      area.innerHTML = '<div class="roster-grid">' + list.map(playerCardHtml).join("") + (isAdmin() ? addCardHtml : "") + '</div>';
-    }
+    var filtering = !!(filters.search || filters.author || filters.status);
+
+    var SECTION_DEFS = team.slug === STAFF_SLUG
+      ? [{ kind: "staff", title: "Staff", addLabel: "Staff Member", ph: "Name&hellip;", empty: "No staff match the current filters." }]
+      : [
+        { kind: "player", title: "Players", addLabel: "Player", ph: "Player name&hellip;", empty: "No players match the current filters." },
+        { kind: "coach", title: "Coaches", addLabel: "Coach", ph: "Coach name&hellip;", empty: "" },
+        { kind: "jersey", title: "Jerseys", addLabel: "Jersey", ph: "Jersey name (e.g. Third Jersey)&hellip;", empty: "No jerseys added yet." }
+      ];
+
+    var html = "";
+    SECTION_DEFS.forEach(function (def) {
+      var items = list.filter(function (p) { return cardKind(p) === def.kind; });
+      var admin = isAdmin();
+      // Coaches/jerseys with nothing in them are hidden for non-admins, so the
+      // page doesn't fill up with empty headings while someone is filtering.
+      if (!items.length && !admin && (def.kind !== "player" && def.kind !== "staff") && (filtering || def.kind === "coach")) return;
+      var addCard = admin
+        ? '<div class="add-card"><div class="display">+ Add ' + def.addLabel + '</div>' +
+          '<input type="text" data-add-input="' + def.kind + '" placeholder="' + def.ph + '">' +
+          '<button class="primary" data-add-btn="' + def.kind + '">Add to ' + escHtml(team.name) + '</button></div>'
+        : "";
+      html += '<section class="roster-section"><div class="section-title">' + def.title +
+        ' <span class="count">' + items.length + '</span></div>';
+      if (!items.length && def.empty) html += '<div class="empty-note">' + def.empty + '</div>';
+      if (items.length || admin) html += '<div class="roster-grid">' + items.map(playerCardHtml).join("") + addCard + '</div>';
+      html += '</section>';
+    });
+    area.innerHTML = html;
     bindRoster();
     var imgPaths = list.map(function (p) { return p.photo_path; }).filter(Boolean);
     if (imgPaths.length) hydrateImages(imgPaths, function () { applyLazyImages(area); });
@@ -610,8 +648,11 @@
     var canEdit = canEditPlayer(p);
     var canEditFully = isAdmin() && !locked;
     var canStageId = !p.author_id && !locked && isApprovedAuthor();
-    var isCoach = p.position === "Coach";
+    var kind = cardKind(p);
+    var isJersey = kind === "jersey";
     var isUploading = !!uploading[p.id];
+    var authorLabel = isJersey ? "Jersey Author" : "Cyberface Author";
+    var filesLabel = isJersey ? "Jersey Files" : "Cyberface Files";
 
     var photoInner = p.photo_path
       ? '<img data-lazy-img="' + escAttr(p.photo_path) + '" alt="">'
@@ -619,8 +660,8 @@
 
     var badge = locked
       ? '<div class="completed-ribbon">Completed</div>'
-      : (isCoach
-        ? '<div class="jersey-badge"><span style="padding:6px 9px;">Coach</span></div>'
+      : (kind !== "player"
+        ? '<div class="jersey-badge"><span style="padding:6px 9px;">' + escHtml(kind === "coach" ? "Coach" : kind === "jersey" ? "Jersey" : (p.position || "Staff")) + '</span></div>'
         : '<div class="jersey-badge"><span>#</span><input data-number-input="' + p.id + '" value="' + escAttr(p.number || "") + '" maxlength="3" placeholder="00"' + (canEdit ? "" : " disabled") + '></div>');
 
     var photoTrigger = canEdit ? ' data-photo-trigger="' + p.id + '"' : '';
@@ -1172,7 +1213,11 @@
   async function loadTeams() {
     var res = await sb.from("teams").select("*").order("name");
     if (!res.error) {
-      teams = res.data || [];
+      teams = (res.data || []).slice().sort(function (a, b) {
+        // Staff is its own page, always last after the 20 real teams.
+        if ((a.slug === STAFF_SLUG) !== (b.slug === STAFF_SLUG)) return a.slug === STAFF_SLUG ? 1 : -1;
+        return (a.name || "").localeCompare(b.name || "");
+      });
       teamLogoPaths = {};
       teams.forEach(function (t) { if (t.logo_path) teamLogoPaths[t.slug] = t.logo_path; });
       if (teamIndex >= teams.length) teamIndex = 0;
