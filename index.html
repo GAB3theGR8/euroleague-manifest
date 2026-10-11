@@ -58,6 +58,10 @@
   .pending-badge { display:inline-flex; align-items:center; justify-content:center; min-width:16px; height:16px; padding:0 4px;
     margin-left:4px; border-radius:999px; background:var(--danger); color:#fff; font-size:.65rem; font-weight:700; line-height:1; vertical-align:middle; }
   .team-nav { display:flex; align-items:center; justify-content:center; gap:10px; }
+  .staff-switch { display:flex; justify-content:center; margin:10px 0 2px; }
+  .staff-btn { border:1px solid var(--border); background:var(--surface); color:var(--text); border-radius:999px; padding:7px 18px; font-size:.78rem; font-weight:700; letter-spacing:.06em; text-transform:uppercase; cursor:pointer; box-shadow:var(--shadow); }
+  .staff-btn:hover { background:var(--surface-2); }
+  .staff-btn.on { background:var(--accent); color:#fff; border-color:transparent; }
   .nav-btn { width:40px; height:40px; border-radius:50%; border:1px solid var(--border); background:var(--surface); color:var(--text);
     font-size:1.2rem; display:flex; align-items:center; justify-content:center; cursor:pointer; flex:none; box-shadow:var(--shadow); }
   .nav-btn:hover { background:var(--surface-2); }
@@ -189,6 +193,7 @@
     <div class="team-nav-center" id="team-nav-center"></div>
     <button class="nav-btn" id="next-team" aria-label="Next team">&rsaquo;</button>
   </div>
+  <div class="staff-switch"><button id="staff-toggle" class="staff-btn"></button></div>
   <div class="controls">
     <input id="search" type="text" placeholder="Search this roster&hellip;">
     <select id="filter-author"><option value="">All authors</option></select>
@@ -228,7 +233,7 @@
 
   var POSITIONS = ["G", "F", "C", "Coach"];
   var STAFF_SLUG = "staff";
-  var STAFF_POSITIONS = ["Referee", "Commissioner", "NPC", "Other"];
+  var STAFF_POSITIONS = ["Referee", "Commissioner", "Cheerleader", "NPC", "Other"];
   // Cards are sorted into sections by what they are: a "Coach" position is a
   // coach, a "Jersey" position is a jersey (files only, no cyberface ID), and
   // everything on the Staff page is staff. Everything else is a player.
@@ -516,26 +521,38 @@
   function renderStats() {
     var total = players.length;
     var assigned = players.filter(function (p) { return p.author_id; }).length;
-    var done = players.filter(function (p) { return p.status === "done"; }).length;
+    var untouched = players.filter(function (p) { return !p.author_id && !p.locked && (!p.status || p.status === "unclaimed") && !(p.files && p.files.length); }).length;
+    var inProgress = players.filter(function (p) { return p.status === "in_progress" && !p.locked; }).length;
     var locked = players.filter(function (p) { return p.locked; }).length;
     function stat(n, l) { return '<div class="stat"><span class="n">' + n + '</span><span class="l">' + l + '</span></div>'; }
     document.getElementById("stat-row").innerHTML =
-      stat(total, "Tracked") + stat(assigned, "Claimed") + stat(done, "Done") + stat(locked, "Completed");
+      stat(total, "Tracked") + stat(untouched, "Unclaimed") + stat(assigned, "Claimed") + stat(inProgress, "In progress") + stat(locked, "Completed");
   }
 
-  function currentTeam() { return teams[teamIndex] || null; }
+  var staffMode = false;
+  function realTeamList() { return teams.filter(function (t) { return t.slug !== STAFF_SLUG; }); }
+  function staffTeam() { return teams.filter(function (t) { return t.slug === STAFF_SLUG; })[0] || null; }
+  function currentTeam() { return staffMode ? staffTeam() : (realTeamList()[teamIndex] || null); }
+  function syncStaffUi() {
+    var b = document.getElementById("staff-toggle");
+    b.textContent = staffMode ? "\u2190 Back to teams" : "Staff & Officials";
+    b.className = "staff-btn" + (staffMode ? " on" : "");
+    document.getElementById("prev-team").style.visibility = staffMode ? "hidden" : "visible";
+    document.getElementById("next-team").style.visibility = staffMode ? "hidden" : "visible";
+  }
 
   function renderTeamNav() {
     var el = document.getElementById("team-nav-center");
     var team = currentTeam();
-    if (!team) { el.innerHTML = '<div class="team-display-meta">No teams yet.</div>'; return; }
+    syncStaffUi();
+    if (!team) { el.innerHTML = '<div class="team-display-meta">' + (staffMode ? "Staff page not set up yet \u2014 run 12_staff_and_jerseys.sql." : "No teams yet.") + '</div>'; return; }
     var logoPath = teamLogoPaths[team.slug];
     var logoHtml = logoPath
       ? '<img data-lazy-img="' + escAttr(logoPath) + '" alt="">'
       : '<div class="logo-placeholder">' + escHtml((team.name || "").slice(0, 3).toUpperCase()) + '</div>';
-    var realTeams = teams.filter(function (t) { return t.slug !== STAFF_SLUG; }).length;
+    var realTeams = realTeamList().length;
     var meta = team.slug === STAFF_SLUG
-      ? "Referees, commissioners &amp; NPCs"
+      ? "Referees, commissioners, cheerleaders &amp; NPCs"
       : escHtml(team.country || "") + ' · Team ' + (teamIndex + 1) + ' of ' + realTeams;
     el.innerHTML =
       '<div class="team-logo-wrap">' + logoHtml + '</div>' +
@@ -668,22 +685,22 @@
 
     var authorRow;
     if (isAdmin()) {
-      authorRow = '<div class="field"><span class="field-label">Cyberface Author</span><select data-author-select="' + p.id + '"' + (locked ? " disabled" : "") + '>' + authorOptions(p.author_id) + '</select></div>';
+      authorRow = '<div class="field"><span class="field-label">' + authorLabel + '</span><select data-author-select="' + p.id + '"' + (locked ? " disabled" : "") + '>' + authorOptions(p.author_id) + '</select></div>';
     } else {
       var myId = myProfile ? myProfile.id : null;
       if (p.author_id && p.author_id === myId) {
-        authorRow = '<div class="field"><span class="field-label">Cyberface Author</span><div class="claim-row"><span class="claimed-by">' + escHtml(profileName(p.author_id)) + ' (you)</span>' +
+        authorRow = '<div class="field"><span class="field-label">' + authorLabel + '</span><div class="claim-row"><span class="claimed-by">' + escHtml(profileName(p.author_id)) + ' (you)</span>' +
           (locked ? "" : '<button class="small ghost" data-unclaim="' + p.id + '">Unclaim</button>') + '</div></div>';
       } else if (p.author_id) {
-        authorRow = '<div class="field"><span class="field-label">Cyberface Author</span><div class="claim-row"><span class="claimed-by">' + escHtml(profileName(p.author_id)) + '</span></div></div>';
+        authorRow = '<div class="field"><span class="field-label">' + authorLabel + '</span><div class="claim-row"><span class="claimed-by">' + escHtml(profileName(p.author_id)) + '</span></div></div>';
       } else {
-        authorRow = '<div class="field"><span class="field-label">Cyberface Author</span><div class="claim-row"><span class="claimed-by" style="color:var(--text-dim);">Unclaimed</span>' +
+        authorRow = '<div class="field"><span class="field-label">' + authorLabel + '</span><div class="claim-row"><span class="claimed-by" style="color:var(--text-dim);">Unclaimed</span>' +
           (locked ? "" : '<button class="small primary" data-claim="' + p.id + '">Claim</button>') + '</div></div>';
       }
     }
 
     var files = p.files || [];
-    var filesHtml = '<div class="field"><span class="field-label">Cyberface Files (' + files.length + ')</span>';
+    var filesHtml = '<div class="field"><span class="field-label">' + filesLabel + ' (' + files.length + ')</span>';
     if (files.length) {
       filesHtml += '<div class="file-list">' + files.slice(0, 3).map(function (f) {
         return '<div class="file-chip"><span class="fname" title="' + escAttr(f.file_name) + '">' + escHtml(f.file_name) + '</span><span>' + fmtSize(f.size_bytes) + '</span></div>';
@@ -707,19 +724,19 @@
     if (canComplete) completeBtns = '<button class="small primary" data-mark-complete="' + p.id + '" style="width:100%;">Mark Completed</button>';
     else if (canUnlock) completeBtns = '<button class="small danger-outline" data-unlock="' + p.id + '" style="width:100%;">Unlock</button>';
 
-    var removeBtn = isAdmin() ? '<button class="card-remove" data-remove-player="' + p.id + '" title="Remove player">×</button>' : "";
+    var removeBtn = isAdmin() ? '<button class="card-remove" data-remove-player="' + p.id + '" title="Remove">×</button>' : "";
 
     return '<div class="player-card' + (locked ? " locked" : "") + '" data-player="' + p.id + '">' +
       removeBtn +
       '<div class="photo-wrap' + (isUploading ? " uploading" : "") + '"' + photoTrigger + '>' + photoInner +
       badge + (canEdit ? '<div class="photo-hint">Click to change photo</div>' : '') + '</div>' +
       '<div class="card-body"><div class="card-body-inner">' +
-      '<input class="name-input" data-name-input="' + p.id + '" value="' + escAttr(p.name) + '" maxlength="80" placeholder="Player name"' + (canEditFully ? "" : " disabled") + '>' +
-      '<select class="position-select" data-position-select="' + p.id + '"' + (canEditFully ? "" : " disabled") + '>' + positionOptions(p.position) + '</select>' +
+      '<input class="name-input" data-name-input="' + p.id + '" value="' + escAttr(p.name) + '" maxlength="80" placeholder="' + (isJersey ? "Jersey name" : "Name") + '"' + (canEditFully ? "" : " disabled") + '>' +
+      (isJersey ? "" : '<select class="position-select" data-position-select="' + p.id + '"' + (canEditFully ? "" : " disabled") + '>' + positionOptions(p.position, kind) + '</select>') +
       '<div class="divider"></div>' +
       authorRow +
-      '<div class="field"><span class="field-label">Cyberface ID</span><input class="id-input mono" data-id-input="' + p.id + '" placeholder="e.g. 07252" value="' + escAttr(p.cyberface_id || "") + '" maxlength="64"' + ((canEdit || canStageId) ? "" : " disabled") + '>' +
-      '</div>' +
+      (isJersey ? "" : '<div class="field"><span class="field-label">Cyberface ID</span><input class="id-input mono" data-id-input="' + p.id + '" placeholder="e.g. 07252" value="' + escAttr(p.cyberface_id || "") + '" maxlength="64"' + ((canEdit || canStageId) ? "" : " disabled") + '>' +
+      '</div>') +
       '<div class="field"><span class="field-label">Status</span><select class="status-select status-' + p.status + '" data-status-select="' + p.id + '"' + (canEdit ? "" : " disabled") + '>' +
       ["unclaimed", "in_progress", "done", "revision"].map(function (s) {
         var labels = { unclaimed: "Unclaimed", in_progress: "In progress", done: "Done", revision: "Needs revision" };
@@ -788,7 +805,7 @@
         var id = sel.getAttribute("data-author-select");
         var player = players.filter(function (p) { return p.id === id; })[0];
         if (!player) return;
-        if (sel.value && !player.author_id && !(player.cyberface_id && player.cyberface_id.trim())) {
+        if (cardKind(player) !== "jersey" && sel.value && !player.author_id && !(player.cyberface_id && player.cyberface_id.trim())) {
           toast("Set this player's Cyberface ID before assigning an author.", false);
           sel.value = player.author_id || "";
           return;
@@ -853,13 +870,16 @@
       btn.onclick = function () { activeModal = { type: "preview", playerId: btn.getAttribute("data-view-preview") }; renderModal(); };
     });
 
-    var addBtn = document.getElementById("add-player-btn");
-    if (addBtn) addBtn.onclick = function () {
-      var input = document.getElementById("add-player-name");
-      var team = currentTeam();
-      if (team) addPlayer(team.slug, team.name, input.value);
-      input.value = "";
-    };
+    area.querySelectorAll("[data-add-btn]").forEach(function (btn) {
+      var kind = btn.getAttribute("data-add-btn");
+      var input = area.querySelector('[data-add-input="' + kind + '"]');
+      function go() {
+        var team = currentTeam();
+        if (team && input && input.value.trim()) { addPlayer(team.slug, team.name, input.value, kind); input.value = ""; }
+      }
+      btn.onclick = go;
+      if (input) input.onkeydown = function (e) { if (e.key === "Enter") go(); };
+    });
   }
 
   // ---------- claim / cyberface id ----------
@@ -898,6 +918,12 @@
 
   async function claimPlayer(player) {
     if (!myProfile) return;
+    if (cardKind(player) === "jersey") {
+      var jr = await sb.from("players").update({ author_id: myProfile.id }).eq("id", player.id);
+      if (jr.error) toast("Couldn't claim: " + jr.error.message, false);
+      else toast(player.name + " claimed.", true);
+      return;
+    }
     var idInput = document.querySelector('[data-id-input="' + player.id + '"]');
     var idVal = normalizeCyberfaceId(idInput ? idInput.value : (player.cyberface_id || ""));
     if (!idVal) { toast("Enter a Cyberface ID before claiming this player.", false); if (idInput) idInput.focus(); return; }
@@ -929,10 +955,14 @@
     else toast(player.name + " unlocked.", true);
   }
 
-  async function addPlayer(teamSlug, teamName, name) {
+  async function addPlayer(teamSlug, teamName, name, kind) {
     name = (name || "").trim();
     if (!name) return;
-    var res = await sb.from("players").insert({ team_slug: teamSlug, name: name, status: "unclaimed" });
+    var row = { team_slug: teamSlug, name: name, status: "unclaimed" };
+    if (kind === "coach") row.position = "Coach";
+    else if (kind === "jersey") row.position = "Jersey";
+    else if (kind === "staff") row.position = "NPC";
+    var res = await sb.from("players").insert(row);
     if (res.error) toast("Couldn't add player: " + res.error.message, false);
   }
   async function removePlayer(player) {
@@ -1077,7 +1107,7 @@
     var canManage = canEditPlayer(p);
     var html = '<div class="modal-overlay"><div class="modal-box">' +
       '<div class="modal-close-row"><button data-modal-close>✕</button></div>' +
-      '<h2>' + escHtml(p.name) + ' — Cyberface Files</h2>';
+      '<h2>' + escHtml(p.name) + ' — ' + (cardKind(p) === 'jersey' ? 'Jersey' : 'Cyberface') + ' Files</h2>';
     if (!files.length) html += '<div style="color:var(--text-dim);font-size:.85rem;">No files uploaded yet.</div>';
     else {
       html += '<div class="file-list">' + files.map(function (f) {
@@ -1104,6 +1134,7 @@
   }
 
   var exporting = false;
+  var resetTarget = null, resetValue = "";
 
   function adminModalHtml() {
     var pending = profiles.filter(function (u) { return u.role === "pending"; });
@@ -1132,7 +1163,10 @@
     html += approved.length ? approved.map(function (u) {
       return '<div class="admin-user-row"><span class="uname">' + escHtml(u.display_name) + (u.role === "admin" ? " (admin)" : "") + '</span>' +
         (u.role !== "admin" ? '<button class="small ghost" data-make-admin="' + u.id + '">Make Admin</button>' : '<button class="small ghost" data-make-author="' + u.id + '">Make Author</button>') +
-        '<button class="small danger-outline" data-revoke="' + u.id + '">Revoke</button></div>';
+        '<button class="small ghost" data-reset-pw="' + u.id + '">Reset password</button>' +
+        '<button class="small danger-outline" data-revoke="' + u.id + '">Revoke</button></div>' +
+        (resetTarget === u.id ? '<div class="admin-user-row" style="gap:6px;"><input type="text" data-reset-input placeholder="New temporary password (6+ chars)" value="' + escAttr(resetValue) + '" autocomplete="off" style="flex:1;min-width:0;">' +
+          '<button class="small primary" data-reset-save="' + u.id + '">Set</button><button class="small ghost" data-reset-cancel>Cancel</button></div>' : '');
     }).join("") : '<div style="color:var(--text-dim);font-size:.85rem;">No approved users yet.</div>';
 
     html += '</div></div>';
@@ -1151,6 +1185,22 @@
     root.querySelectorAll("[data-approve-admin]").forEach(function (b) { b.onclick = function () { setRole(b.getAttribute("data-approve-admin"), "admin"); }; });
     root.querySelectorAll("[data-make-admin]").forEach(function (b) { b.onclick = function () { setRole(b.getAttribute("data-make-admin"), "admin"); }; });
     root.querySelectorAll("[data-make-author]").forEach(function (b) { b.onclick = function () { setRole(b.getAttribute("data-make-author"), "author"); }; });
+    root.querySelectorAll("[data-reset-pw]").forEach(function (b) { b.onclick = function () { resetTarget = b.getAttribute("data-reset-pw"); resetValue = ""; renderModal(); }; });
+    root.querySelectorAll("[data-reset-cancel]").forEach(function (b) { b.onclick = function () { resetTarget = null; resetValue = ""; renderModal(); }; });
+    root.querySelectorAll("[data-reset-input]").forEach(function (i) { i.oninput = function () { resetValue = i.value; }; i.focus(); });
+    root.querySelectorAll("[data-reset-save]").forEach(function (b) {
+      b.onclick = async function () {
+        var pw = resetValue;
+        if (!pw || pw.length < 6) { toast("Password must be at least 6 characters.", false); return; }
+        b.disabled = true;
+        var res = await sb.rpc("admin_set_password", { target: b.getAttribute("data-reset-save"), new_password: pw });
+        b.disabled = false;
+        if (res.error) { toast("Couldn't reset: " + res.error.message, false); return; }
+        resetTarget = null; resetValue = "";
+        toast("Password updated. Give them the temporary password and have them sign in.", true);
+        renderModal();
+      };
+    });
     root.querySelectorAll("[data-deny],[data-revoke]").forEach(function (b) {
       b.onclick = async function () {
         var id = b.getAttribute("data-deny") || b.getAttribute("data-revoke");
@@ -1220,7 +1270,7 @@
       });
       teamLogoPaths = {};
       teams.forEach(function (t) { if (t.logo_path) teamLogoPaths[t.slug] = t.logo_path; });
-      if (teamIndex >= teams.length) teamIndex = 0;
+      if (teamIndex >= realTeamList().length) teamIndex = 0;
     }
   }
   async function loadBrand() {
@@ -1282,8 +1332,9 @@
     renderModal();
   }
 
-  document.getElementById("prev-team").onclick = function () { if (!teams.length) return; teamIndex = (teamIndex - 1 + teams.length) % teams.length; saveTeamIndex(); renderTeamNav(); renderRoster(); };
-  document.getElementById("next-team").onclick = function () { if (!teams.length) return; teamIndex = (teamIndex + 1) % teams.length; saveTeamIndex(); renderTeamNav(); renderRoster(); };
+  document.getElementById("staff-toggle").onclick = function () { staffMode = !staffMode; renderTeamNav(); renderRoster(); };
+  document.getElementById("prev-team").onclick = function () { var n = realTeamList().length; if (!n) return; teamIndex = (teamIndex - 1 + n) % n; saveTeamIndex(); renderTeamNav(); renderRoster(); };
+  document.getElementById("next-team").onclick = function () { var n = realTeamList().length; if (!n) return; teamIndex = (teamIndex + 1) % n; saveTeamIndex(); renderTeamNav(); renderRoster(); };
   document.getElementById("search").addEventListener("input", function (e) { filters.search = e.target.value; renderRoster(); });
   document.getElementById("filter-author").addEventListener("change", function (e) { filters.author = e.target.value; renderRoster(); });
   document.getElementById("filter-status").addEventListener("change", function (e) { filters.status = e.target.value; renderRoster(); });
