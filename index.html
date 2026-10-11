@@ -210,7 +210,7 @@
 
 <div id="roster-area"></div>
 
-<footer class="note">Cyberface IDs are reserved across the whole manifest &mdash; claiming one already in use elsewhere will tell you who has it. Data is shared live with everyone approved on this project.</footer>
+<footer class="note">Cyberface IDs are reserved across the whole manifest &mdash; claiming one already in use elsewhere will tell you who has it. Data is shared live with everyone approved on this project. <span style="opacity:.6">Build 2026-10-11 r3 (authors can add)</span></footer>
 
 <div id="toast" class="status-msg" hidden></div>
 <div id="gate-root"></div>
@@ -640,10 +640,11 @@
     SECTION_DEFS.forEach(function (def) {
       var items = list.filter(function (p) { return cardKind(p) === def.kind; });
       var admin = isAdmin();
-      // Coaches/jerseys with nothing in them are hidden for non-admins, so the
-      // page doesn't fill up with empty headings while someone is filtering.
-      if (!items.length && !admin && (def.kind !== "player" && def.kind !== "staff") && (filtering || def.kind === "coach")) return;
-      var addCard = admin
+      // Authors can add coaches, jerseys and staff (not players -- the player
+      // roster is admin-managed). Admins can add everything.
+      var canAdd = admin || def.kind !== "player";
+      if (!items.length && filtering && (def.kind !== "player" && def.kind !== "staff")) return;
+      var addCard = canAdd
         ? '<div class="add-card"><div class="display">+ Add ' + def.addLabel + '</div>' +
           '<input type="text" data-add-input="' + def.kind + '" placeholder="' + def.ph + '">' +
           '<button class="primary" data-add-btn="' + def.kind + '">Add to ' + escHtml(team.name) + '</button></div>'
@@ -651,7 +652,7 @@
       html += '<section class="roster-section"><div class="section-title">' + def.title +
         ' <span class="count">' + items.length + '</span></div>';
       if (!items.length && def.empty) html += '<div class="empty-note">' + def.empty + '</div>';
-      if (items.length || admin) html += '<div class="roster-grid">' + items.map(playerCardHtml).join("") + addCard + '</div>';
+      if (items.length || canAdd) html += '<div class="roster-grid">' + items.map(playerCardHtml).join("") + addCard + '</div>';
       html += '</section>';
     });
     area.innerHTML = html;
