@@ -210,7 +210,7 @@
 
 <div id="roster-area"></div>
 
-<footer class="note">Cyberface IDs are reserved across the whole manifest &mdash; claiming one already in use elsewhere will tell you who has it. Data is shared live with everyone approved on this project. <span style="opacity:.6">Build 2026-10-11 r3 (authors can add)</span></footer>
+<footer class="note">Cyberface IDs are reserved across the whole manifest &mdash; claiming one already in use elsewhere will tell you who has it. Data is shared live with everyone approved on this project. <span style="opacity:.6">Build 2026-10-16 r4 (export folders)</span></footer>
 
 <div id="toast" class="status-msg" hidden></div>
 <div id="gate-root"></div>
@@ -1213,41 +1213,88 @@
   }
 
   // ---------- export ----------
+  // Where each uploaded file goes inside the exported zip:
+  //   *_font.iff / *_tweak.iff            -> clothing/
+  //   png*.iff                            -> char/sig/
+  //   jersey card files                   -> char/uniforms/<uniform>/ , where <uniform> is the
+  //                                          name of the card's main uniform file
+  //                                          (e.g. u029gs_current_away.iff -> u029gs_current_away)
+  //   .zip files                          -> opened, contents merged in as-is (already structured)
+  //   anything that matches no rule       -> _unsorted/ (so nothing is silently lost)
+  function isUniformMainFile(name) {
+    var n = String(name || "").toLowerCase();
+    if (!/\.iff$/.test(n)) return false;
+    if (/_(font|tweak)\.iff$/.test(n)) return false;
+    return /^u\d+[a-z0-9]*_[a-z0-9_]+\.iff$/.test(n);
+  }
+  function exportPathFor(fileName, kind, uniformFolder) {
+    var n = String(fileName || "");
+    var low = n.toLowerCase();
+    if (/_(font|tweak)\.iff$/.test(low)) return "clothing/" + n;
+    if (kind === "jersey") return uniformFolder ? "char/uniforms/" + uniformFolder + "/" + n : "_unsorted/" + n;
+    if (/^png/.test(low)) return "char/sig/" + n;
+    return "_unsorted/" + n;
+  }
+
   async function runExport() {
     if (exporting) return;
-    if (typeof JSZip === "undefined") { toast("Zip library didn't load — try reloading.", false); return; }
+    if (typeof JSZip === "undefined") { toast("Zip library didn't load \u2014 try reloading.", false); return; }
     var completedPlayers = players.filter(function (p) { return p.locked && p.files && p.files.length; });
     if (!completedPlayers.length) { toast("No completed players with files to export yet.", false); return; }
 
     exporting = true;
     renderModal();
+    var unsorted = 0, merged = 0, collisions = 0;
     try {
       var zip = new JSZip();
-      var manifestRows = ["team,player,cyberface_id,filename,uploaded_by"];
+      var seen = {};
+      function put(path, data) {
+        if (seen[path.toLowerCase()]) collisions++;
+        seen[path.toLowerCase()] = true;
+        zip.file(path, data);
+      }
       for (var i = 0; i < completedPlayers.length; i++) {
         var p = completedPlayers[i];
-        var team = teams.filter(function (t) { return t.slug === p.team_slug; })[0];
+        var kind = cardKind(p);
+        // For jerseys, the uniform folder comes from this card's main uniform file.
+        var uniformFolder = "";
+        if (kind === "jersey") {
+          var main = (p.files || []).filter(function (f) { return isUniformMainFile(f.file_name); })[0];
+          if (main) uniformFolder = main.file_name.replace(/\.iff$/i, "");
+        }
         for (var j = 0; j < p.files.length; j++) {
           var f = p.files[j];
           var dl = await sb.storage.from(BUCKET).download(f.storage_path);
-          if (dl.error) { toast("Couldn't fetch " + f.file_name + " — skipped.", false); continue; }
-          // Every file goes in one flat folder, exactly as uploaded -- no
-          // renaming, no prefix, no suffix, same as the old tool.
-          var safeName = f.file_name || ((p.cyberface_id || p.id) + ".iff");
-          zip.file(safeName, dl.data);
-          manifestRows.push([team ? team.name : p.team_slug, p.name, p.cyberface_id || "", safeName, profileName(f.uploaded_by) || ""].map(function (v) {
-            return '"' + String(v).replace(/"/g, '""') + '"';
-          }).join(","));
+          if (dl.error) { toast("Couldn't fetch " + f.file_name + " \u2014 skipped.", false); continue; }
+          var fname = f.file_name || ((p.cyberface_id || p.id) + ".iff");
+          if (/\.zip$/i.test(fname)) {
+            // Already-structured bundle: open it and merge its contents at the root.
+            var inner = await JSZip.loadAsync(dl.data);
+            var names = Object.keys(inner.files);
+            for (var k = 0; k < names.length; k++) {
+              var entry = inner.files[names[k]];
+              if (entry.dir || /^__MACOSX\//.test(entry.name) || /(^|\/)\.DS_Store$/.test(entry.name)) continue;
+              put(entry.name, await entry.async("uint8array"));
+              merged++;
+            }
+            continue;
+          }
+          var path = exportPathFor(fname, kind, uniformFolder);
+          if (path.indexOf("_unsorted/") === 0) unsorted++;
+          put(path, dl.data);
         }
       }
-      zip.file("manifest.csv", manifestRows.join("\n"));
       var blob = await zip.generateAsync({ type: "blob" });
       var a = document.createElement("a");
       var url = URL.createObjectURL(blob);
       a.href = url; a.download = "EuroLeague_Cyberfaces.zip";
       document.body.appendChild(a); a.click(); document.body.removeChild(a);
       setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
-      toast("Export saved.", true);
+      var msg = "Export saved.";
+      if (merged) msg += " " + merged + " file" + (merged === 1 ? "" : "s") + " merged from zips.";
+      if (unsorted) msg += " " + unsorted + " file" + (unsorted === 1 ? "" : "s") + " matched no rule and are in _unsorted/.";
+      if (collisions) msg += " " + collisions + " duplicate path" + (collisions === 1 ? "" : "s") + " overwritten.";
+      toast(msg, !unsorted && !collisions);
     } catch (e) {
       toast("Export failed: " + (e && e.message ? e.message : "unknown error"), false);
     } finally {
