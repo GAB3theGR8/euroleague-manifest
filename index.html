@@ -210,7 +210,7 @@
 
 <div id="roster-area"></div>
 
-<footer class="note">Cyberface IDs are reserved across the whole manifest &mdash; claiming one already in use elsewhere will tell you who has it. Data is shared live with everyone approved on this project. <span style="opacity:.6">Build 2026-10-16 r4 (export folders)</span></footer>
+<footer class="note">Cyberface IDs are reserved across the whole manifest &mdash; claiming one already in use elsewhere will tell you who has it. Data is shared live with everyone approved on this project. <span style="opacity:.6">Build 2026-10-17 r5 (zip fix, authors add players)</span></footer>
 
 <div id="toast" class="status-msg" hidden></div>
 <div id="gate-root"></div>
@@ -640,9 +640,8 @@
     SECTION_DEFS.forEach(function (def) {
       var items = list.filter(function (p) { return cardKind(p) === def.kind; });
       var admin = isAdmin();
-      // Authors can add coaches, jerseys and staff (not players -- the player
-      // roster is admin-managed). Admins can add everything.
-      var canAdd = admin || def.kind !== "player";
+      // Any approved user can add to any section.
+      var canAdd = true; // any approved author can add players, coaches, jerseys and staff
       if (!items.length && filtering && (def.kind !== "player" && def.kind !== "staff")) return;
       var addCard = canAdd
         ? '<div class="add-card"><div class="display">+ Add ' + def.addLabel + '</div>' +
@@ -1244,7 +1243,7 @@
 
     exporting = true;
     renderModal();
-    var unsorted = 0, merged = 0, collisions = 0;
+    var unsorted = 0, merged = 0, collisions = 0, badZips = [];
     try {
       var zip = new JSZip();
       var seen = {};
@@ -1269,7 +1268,15 @@
           var fname = f.file_name || ((p.cyberface_id || p.id) + ".iff");
           if (/\.zip$/i.test(fname)) {
             // Already-structured bundle: open it and merge its contents at the root.
-            var inner = await JSZip.loadAsync(dl.data);
+            var inner = null;
+            try { inner = await JSZip.loadAsync(await dl.data.arrayBuffer()); }
+            catch (zerr) {
+              // Not a readable zip (renamed/damaged upload). Keep it as-is so it isn't lost.
+              badZips.push(fname + " (" + p.name + ")");
+              put("_unsorted/" + fname, dl.data);
+              unsorted++;
+              continue;
+            }
             var names = Object.keys(inner.files);
             for (var k = 0; k < names.length; k++) {
               var entry = inner.files[names[k]];
@@ -1293,8 +1300,9 @@
       var msg = "Export saved.";
       if (merged) msg += " " + merged + " file" + (merged === 1 ? "" : "s") + " merged from zips.";
       if (unsorted) msg += " " + unsorted + " file" + (unsorted === 1 ? "" : "s") + " matched no rule and are in _unsorted/.";
+      if (badZips.length) msg += " Couldn't open as a zip: " + badZips.join(", ") + ".";
       if (collisions) msg += " " + collisions + " duplicate path" + (collisions === 1 ? "" : "s") + " overwritten.";
-      toast(msg, !unsorted && !collisions);
+      toast(msg, !unsorted && !collisions && !badZips.length);
     } catch (e) {
       toast("Export failed: " + (e && e.message ? e.message : "unknown error"), false);
     } finally {
